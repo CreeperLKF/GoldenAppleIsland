@@ -155,10 +155,45 @@ The app listens on `127.0.0.1:9876`. Messages are JSON.
 - **`WebSocket is not defined` in bridge.** Upgrade WSL Node to 22+.
 - **Hook not firing.** Check `~/.claude/settings.json` has a `hooks.PreToolUse` entry pointing to `~/.claude/hooks/pre-tool-use.sh`, and that the script is `chmod +x`.
 
+## Releasing
+
+Versions across `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` stay in lock-step. Use the bump script and let CI do the rest:
+
+```bash
+npm run release patch   # or: minor / major / 1.2.3
+git add -A
+git commit -m "chore: release v$(node -p "require('./package.json').version")"
+git tag v$(node -p "require('./package.json').version")
+git push --follow-tags
+```
+
+Pushing a `v*` tag triggers `.github/workflows/release.yml`, which on a Windows runner builds the MSI and NSIS installers plus the WSL tarball, then attaches them to a new GitHub Release.
+
+### Local build
+
+```bash
+npm install
+npm run tauri:build     # produces MSI + NSIS under src-tauri/target/release/bundle/
+npm run bundle:wsl      # produces dist-wsl/claude-hook-guard-wsl-<version>.tar.gz
+```
+
+### Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Vite dev server only |
+| `npm run tauri:dev` | Full Tauri dev (Vite + Rust) |
+| `npm run tauri:build` | Production MSI + NSIS installer |
+| `npm run build` | `tsc` + Vite frontend build only |
+| `npm run check` | Typecheck + `cargo check` (no build) |
+| `npm run bundle:wsl` | Tarball of `wsl/` for standalone distribution |
+| `npm run release <bump>` | Bump version in all three manifests |
+| `npm run clean` | Wipe `dist/`, `src-tauri/target/`, caches |
+
 ## Status
 
-**v1 — P0 only.** The MVP covers hook installation, event reception, approval UI, tray, toast, and timeout handling. Planned for later: auto-approve by session/tool, diff preview for file writes, decision history, global hotkey, and a rule engine. See `docs/prd.md` in the companion development workspace for the full roadmap.
+**v1 — P0 + UI polish.** Covers hook installation, event reception, approval UI, tray, toast, timeout handling, approve-all, in-memory auto-approve session, and a decision history view. Planned for later: auto-approve by tool, diff preview for file writes, global hotkey, and a rule engine. See `docs/prd.md` in the companion development workspace for the full roadmap.
 
 ## License
 
-TBD
+MIT — see [LICENSE](LICENSE).
