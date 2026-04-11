@@ -4,12 +4,21 @@ import type { HookEvent } from "../types/events";
 
 const FADE_MS = 200;
 
-export function usePendingEvents() {
+export type ResolveAction = "approve" | "deny";
+
+export interface UsePendingEventsOptions {
+  onResolve?: (event: HookEvent, action: ResolveAction) => void;
+}
+
+export function usePendingEvents(options: UsePendingEventsOptions = {}) {
+  const { onResolve } = options;
   const [pending, setPending] = useState<HookEvent[]>([]);
   const [resolving, setResolving] = useState<Set<string>>(new Set());
   const lastCountRef = useRef<number>(-1);
+  const pendingRef = useRef<HookEvent[]>([]);
 
   useEffect(() => {
+    pendingRef.current = pending;
     const visibleCount = pending.filter((e) => !resolving.has(e.id)).length;
     if (visibleCount !== lastCountRef.current) {
       lastCountRef.current = visibleCount;
@@ -25,8 +34,10 @@ export function usePendingEvents() {
   }, []);
 
   const resolve = useCallback(
-    (id: string, action: "approve" | "deny") => {
+    (id: string, action: ResolveAction) => {
+      const event = pendingRef.current.find((e) => e.id === id);
       invoke("respond", { id, action }).catch(() => {});
+      if (event && onResolve) onResolve(event, action);
       setResolving((prev) => {
         const next = new Set(prev);
         next.add(id);
@@ -41,7 +52,7 @@ export function usePendingEvents() {
         });
       }, FADE_MS);
     },
-    [],
+    [onResolve],
   );
 
   return { pending, resolving, enqueue, resolve };

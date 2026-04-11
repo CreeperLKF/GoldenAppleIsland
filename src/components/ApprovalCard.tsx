@@ -58,7 +58,7 @@ export default function ApprovalCard({ event, resolving, onApprove, onDeny }: Ap
 
   return (
     <article
-      className="overflow-hidden bg-[var(--bg-surface)] transition-all ease-in"
+      className="card-enter overflow-hidden bg-[var(--bg-surface)] transition-all ease-in"
       style={{
         borderRadius: 6,
         border: "0.5px solid var(--border)",

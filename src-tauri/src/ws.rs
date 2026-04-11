@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -6,6 +7,7 @@ use std::sync::OnceLock;
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_notification::NotificationExt;
 use tokio::net::TcpListener;
@@ -15,6 +17,33 @@ use tokio_tungstenite::tungstenite::Message;
 
 const BIND_ADDR: &str = "127.0.0.1:9876";
 const RESPONSE_TIMEOUT_SECS: u64 = 300;
+
+static CLIENT_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+struct ClientGuard {
+    app: AppHandle,
+}
+
+impl ClientGuard {
+    fn new(app: AppHandle) -> Self {
+        let n = CLIENT_COUNT.fetch_add(1, Ordering::SeqCst) + 1;
+        emit_connection_count(&app, n);
+        Self { app }
+    }
+}
+
+impl Drop for ClientGuard {
+    fn drop(&mut self) {
+        let n = CLIENT_COUNT.fetch_sub(1, Ordering::SeqCst).saturating_sub(1);
+        emit_connection_count(&self.app, n);
+    }
+}
+
+fn emit_connection_count(app: &AppHandle, count: usize) {
+    if let Err(e) = app.emit("connection_changed", json!({ "count": count })) {
+        log::warn!("emit connection_changed failed: {}", e);
+    }
+}
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct HookEvent {
@@ -70,6 +99,8 @@ pub async fn send_response(id: String, action: String) {
 }
 
 pub async fn serve(app: AppHandle) {
+    emit_connection_count(&app, 0);
+
     let listener = match TcpListener::bind(BIND_ADDR).await {
         Ok(l) => l,
         Err(e) => {
@@ -101,6 +132,8 @@ async fn handle_connection(
     stream: tokio::net::TcpStream,
     app: AppHandle,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let _guard = ClientGuard::new(app.clone());
+
     let ws_stream = tokio_tungstenite::accept_async(stream).await?;
     let (write, mut read) = ws_stream.split();
     let write = Arc::new(Mutex::new(write));

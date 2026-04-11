@@ -4,7 +4,7 @@ mod ws;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager,
+    Manager, PhysicalPosition,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -53,12 +53,13 @@ pub fn run() {
                     } = event
                     {
                         let app = tray.app_handle();
+                        let cursor = app.cursor_position().ok();
                         if let Some(win) = app.get_webview_window("main") {
                             let visible = win.is_visible().unwrap_or(false);
                             if visible {
                                 let _ = win.hide();
                             } else {
-                                position_window_near_tray(&win);
+                                position_window_at_cursor(&win, cursor);
                                 let _ = win.show();
                                 let _ = win.set_focus();
                             }
@@ -78,18 +79,49 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-fn position_window_near_tray(window: &tauri::WebviewWindow) {
+fn position_window_at_cursor(
+    window: &tauri::WebviewWindow,
+    cursor: Option<PhysicalPosition<f64>>,
+) {
     let Ok(Some(monitor)) = window.primary_monitor() else {
         return;
     };
-    let size = monitor.size();
+    let mon_size = monitor.size();
+    let mon_pos = monitor.position();
     let scale = monitor.scale_factor();
     let win_size = window.outer_size().unwrap_or(tauri::PhysicalSize {
         width: (400.0 * scale) as u32,
         height: (600.0 * scale) as u32,
     });
-    let margin = (12.0 * scale) as i32;
-    let x = size.width as i32 - win_size.width as i32 - margin;
-    let y = size.height as i32 - win_size.height as i32 - margin;
+    let margin = (8.0 * scale) as i32;
+
+    let (anchor_x, anchor_y) = match cursor {
+        Some(p) => (p.x as i32, p.y as i32),
+        None => (
+            mon_pos.x + mon_size.width as i32 - margin,
+            mon_pos.y + mon_size.height as i32 - margin,
+        ),
+    };
+
+    let mut x = anchor_x - win_size.width as i32 - margin;
+    let mut y = anchor_y - win_size.height as i32 - margin;
+
+    let min_x = mon_pos.x + margin;
+    let min_y = mon_pos.y + margin;
+    let max_x = mon_pos.x + mon_size.width as i32 - win_size.width as i32 - margin;
+    let max_y = mon_pos.y + mon_size.height as i32 - win_size.height as i32 - margin;
+    if x < min_x {
+        x = min_x;
+    }
+    if y < min_y {
+        y = min_y;
+    }
+    if x > max_x {
+        x = max_x;
+    }
+    if y > max_y {
+        y = max_y;
+    }
+
     let _ = window.set_position(tauri::PhysicalPosition { x, y });
 }
