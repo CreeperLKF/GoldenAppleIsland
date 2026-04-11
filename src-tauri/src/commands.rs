@@ -8,6 +8,13 @@ pub async fn respond(id: String, action: String) {
 }
 
 #[tauri::command]
+pub fn get_pending_events() -> Vec<ws::HookEvent> {
+    let snap = ws::snapshot_queue();
+    log::info!("get_pending_events called, returning {} events", snap.len());
+    snap
+}
+
+#[tauri::command]
 pub fn set_pending_count(count: u32, app: AppHandle) {
     let tooltip = if count == 0 {
         "Claude Hook Guard".to_string()

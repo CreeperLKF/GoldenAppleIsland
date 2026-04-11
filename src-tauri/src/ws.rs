@@ -36,14 +36,25 @@ pub struct HookResponse {
 }
 
 type PendingMap = Arc<DashMap<String, mpsc::Sender<HookResponse>>>;
+type QueueMap = Arc<DashMap<String, HookEvent>>;
 
 static PENDING: OnceLock<PendingMap> = OnceLock::new();
+static QUEUE: OnceLock<QueueMap> = OnceLock::new();
 
 fn pending() -> &'static PendingMap {
     PENDING.get_or_init(|| Arc::new(DashMap::new()))
 }
 
+fn queue() -> &'static QueueMap {
+    QUEUE.get_or_init(|| Arc::new(DashMap::new()))
+}
+
+pub fn snapshot_queue() -> Vec<HookEvent> {
+    queue().iter().map(|e| e.value().clone()).collect()
+}
+
 pub async fn send_response(id: String, action: String) {
+    queue().remove(&id);
     let Some((_, tx)) = pending().remove(&id) else {
         log::warn!("send_response: no pending entry for id {}", id);
         return;
@@ -131,9 +142,17 @@ async fn handle_connection(
 
         let (tx, mut rx) = mpsc::channel::<HookResponse>(1);
         pending().insert(event.id.clone(), tx);
+        queue().insert(event.id.clone(), event.clone());
+        log::info!(
+            "received hook_event id={} tool={} queue_len={}",
+            event.id,
+            event.tool_name,
+            queue().len()
+        );
 
-        if let Err(e) = app.emit("hook_event", event.clone()) {
-            log::warn!("emit hook_event failed: {}", e);
+        match app.emit("hook_event", event.clone()) {
+            Ok(_) => log::info!("emitted hook_event id={} to frontend", event.id),
+            Err(e) => log::warn!("emit hook_event failed: {}", e),
         }
 
         let body = format_notification_body(&event);
@@ -155,6 +174,7 @@ async fn handle_connection(
                 Ok(None) => {
                     log::warn!("sender dropped for {}, denying", event_id);
                     pending().remove(&event_id);
+                    queue().remove(&event_id);
                     HookResponse {
                         r#type: "hook_response",
                         id: event_id.clone(),
@@ -164,6 +184,7 @@ async fn handle_connection(
                 Err(_) => {
                     log::info!("timeout for {}, auto-deny", event_id);
                     pending().remove(&event_id);
+                    queue().remove(&event_id);
                     HookResponse {
                         r#type: "hook_response",
                         id: event_id.clone(),

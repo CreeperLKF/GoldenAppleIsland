@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import type { HookEvent } from "../types/events";
 
 export function useWebSocket(onEvent: (event: HookEvent) => void) {
@@ -7,16 +8,26 @@ export function useWebSocket(onEvent: (event: HookEvent) => void) {
     let unlisten: (() => void) | undefined;
     let cancelled = false;
 
-    listen<HookEvent>("hook_event", (msg) => {
-      onEvent(msg.payload);
-    }).then((fn) => {
-      if (cancelled) fn();
-      else unlisten = fn;
-    }).catch(() => {});
+    (async () => {
+      try {
+        unlisten = await listen<HookEvent>("hook_event", (msg) => {
+          onEvent(msg.payload);
+        });
+        if (cancelled) {
+          unlisten?.();
+          return;
+        }
+        const queued = await invoke<HookEvent[]>("get_pending_events");
+        if (cancelled) return;
+        for (const event of queued) onEvent(event);
+      } catch {
+        /* Tauri API unavailable or event channel denied */
+      }
+    })();
 
     return () => {
       cancelled = true;
-      if (unlisten) unlisten();
+      unlisten?.();
     };
   }, [onEvent]);
 }
