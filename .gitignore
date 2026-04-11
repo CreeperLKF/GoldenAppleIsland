@@ -23,6 +23,8 @@ dist/
 dist-ssr/
 .vite/
 *.tsbuildinfo
+vite.config.js
+vite.config.d.ts
 
 # Env & secrets
 .env

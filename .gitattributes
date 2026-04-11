@@ -1,0 +1,9 @@
+# Force LF for shell scripts and WSL-side Node — CRLF breaks bash in WSL
+*.sh        text eol=lf
+*.mjs       text eol=lf
+wsl/**      text eol=lf
+
+# Binary assets — never normalize
+*.png       binary
+*.ico       binary
+*.icns      binary
