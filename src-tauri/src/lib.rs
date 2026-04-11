@@ -1,5 +1,7 @@
+mod app_settings;
 mod commands;
 mod ws;
+mod wsl_admin;
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -13,6 +15,7 @@ pub fn run() {
         .format_timestamp_millis()
         .init();
     log::info!("Claude Hook Guard starting up");
+    app_settings::init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
@@ -22,11 +25,19 @@ pub fn run() {
             commands::set_pending_count,
             commands::show_popup,
             commands::hide_popup,
+            commands::get_app_settings,
+            commands::update_app_settings,
+            commands::list_wsl_distros,
+            commands::set_hook_enabled,
+            commands::set_hook_enabled_all,
+            commands::open_settings_window,
         ])
         .setup(|app| {
             let show_item = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let settings_item =
+                MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+            let menu = Menu::with_items(app, &[&show_item, &settings_item, &quit_item])?;
 
             let _tray = TrayIconBuilder::with_id("main")
                 .tooltip("Claude Hook Guard")
@@ -38,6 +49,11 @@ pub fn run() {
                         if let Some(win) = app.get_webview_window("main") {
                             let _ = win.show();
                             let _ = win.set_focus();
+                        }
+                    }
+                    "settings" => {
+                        if let Err(e) = commands::open_settings_window(app.clone()) {
+                            log::warn!("open_settings_window: {}", e);
                         }
                     }
                     "quit" => {

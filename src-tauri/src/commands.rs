@@ -1,6 +1,9 @@
-use tauri::{AppHandle, Window};
+use serde_json::Value;
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Window};
 
+use crate::app_settings::{self, AppSettings};
 use crate::ws;
+use crate::wsl_admin::{self, BulkResult, WslDistroWithStatus};
 
 #[tauri::command]
 pub async fn respond(id: String, action: String) {
@@ -39,4 +42,63 @@ fn update_tray_badge(app: &AppHandle, tooltip: &str, _count: u32) {
     if let Some(tray) = app.tray_by_id("main") {
         let _ = tray.set_tooltip(Some(tooltip));
     }
+}
+
+#[tauri::command]
+pub fn get_app_settings() -> AppSettings {
+    app_settings::get()
+}
+
+#[tauri::command]
+pub fn update_app_settings(patch: Value) -> AppSettings {
+    let mut current = app_settings::get();
+    if let Some(b) = patch.get("toast_enabled").and_then(|v| v.as_bool()) {
+        current.toast_enabled = b;
+    }
+    if let Some(b) = patch.get("sound_enabled").and_then(|v| v.as_bool()) {
+        current.sound_enabled = b;
+    }
+    app_settings::set(current)
+}
+
+#[tauri::command]
+pub async fn list_wsl_distros() -> Result<Vec<WslDistroWithStatus>, String> {
+    wsl_admin::list_with_status().await
+}
+
+#[tauri::command]
+pub async fn set_hook_enabled(distro: String, enabled: bool) -> Result<(), String> {
+    if enabled {
+        wsl_admin::enable_hook(&distro).await
+    } else {
+        wsl_admin::disable_hook(&distro).await
+    }
+}
+
+#[tauri::command]
+pub async fn set_hook_enabled_all(enabled: bool) -> Vec<BulkResult> {
+    wsl_admin::set_hook_all(enabled).await
+}
+
+#[tauri::command]
+pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
+    if let Some(existing) = app.get_webview_window("settings") {
+        let _ = existing.show();
+        let _ = existing.set_focus();
+        let _ = existing.unminimize();
+        return Ok(());
+    }
+
+    WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("index.html#/settings".into()))
+        .title("Claude Hook Guard — Settings")
+        .inner_size(480.0, 640.0)
+        .min_inner_size(420.0, 480.0)
+        .resizable(true)
+        .skip_taskbar(false)
+        .always_on_top(false)
+        .decorations(true)
+        .visible(true)
+        .build()
+        .map_err(|e| format!("failed to open settings window: {}", e))?;
+    Ok(())
 }

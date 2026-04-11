@@ -188,15 +188,23 @@ async fn handle_connection(
             Err(e) => log::warn!("emit hook_event failed: {}", e),
         }
 
-        let body = format_notification_body(&event);
-        if let Err(e) = app
-            .notification()
-            .builder()
-            .title("Claude Code needs approval")
-            .body(body)
-            .show()
-        {
-            log::warn!("notification failed: {}", e);
+        let prefs = crate::app_settings::get();
+        if prefs.toast_enabled {
+            let body = format_notification_body(&event);
+            let mut builder = app
+                .notification()
+                .builder()
+                .title("Claude Code needs approval")
+                .body(body);
+            if !prefs.sound_enabled {
+                // Tauri v2 notification builder: empty/silent sound maps to
+                // Windows Toast `silent="true"`. Passing "Silent" is the
+                // closest cross-version hint.
+                builder = builder.sound("Silent");
+            }
+            if let Err(e) = builder.show() {
+                log::warn!("notification failed: {}", e);
+            }
         }
 
         let write_clone = write.clone();
