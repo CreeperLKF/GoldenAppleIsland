@@ -34,6 +34,8 @@ pub fn run() {
             commands::set_hook_enabled,
             commands::set_hook_enabled_all,
             commands::open_settings_window,
+            commands::get_windows_hook_status,
+            commands::set_windows_hook_enabled,
         ])
         .setup(|app| {
             let show_item = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
