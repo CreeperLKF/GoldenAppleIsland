@@ -54,6 +54,16 @@ pub fn run() {
             commands::open_settings_window,
             commands::get_windows_hook_status,
             commands::set_windows_hook_enabled,
+            commands::get_approval_policies,
+            commands::set_global_policy,
+            commands::set_distro_policy,
+            commands::remove_distro_policy,
+            commands::set_folder_policy,
+            commands::remove_folder_policy,
+            commands::set_session_policy,
+            commands::remove_session_policy,
+            commands::promote_session_to_folder,
+            commands::list_recent_sessions,
         ])
         .setup(|app| {
             let show_item = CheckMenuItem::with_id(app, "show", "Show", true, false, None::<&str>)?;

@@ -1,8 +1,13 @@
 use serde_json::Value;
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Window};
+use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Window};
 
 use crate::app_settings::{self, AppSettings};
 use crate::file_logger;
+use crate::path_norm;
+use crate::policy::{
+    self, ApprovalPolicies, PolicyKind, PolicyRule, SessionRule, SESSION_RULE_CAP,
+};
+use crate::session_ctx;
 use crate::ws;
 use crate::wsl_admin::{self, BulkResult, HookStatus, WslDistroWithStatus};
 
@@ -172,4 +177,171 @@ pub fn set_windows_hook_enabled(enabled: bool) -> Result<(), String> {
     } else {
         crate::windows_hook::disable()
     }
+}
+
+fn now_iso() -> String {
+    chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+}
+
+fn write_policies<F>(app: &AppHandle, mutate: F) -> Result<(), String>
+where
+    F: FnOnce(&mut ApprovalPolicies),
+{
+    let mut current = app_settings::get();
+    mutate(&mut current.approval_policies);
+    let updated = app_settings::set(current);
+    let _ = app.emit("approval_policies_changed", &updated.approval_policies);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_approval_policies() -> ApprovalPolicies {
+    app_settings::get().approval_policies
+}
+
+#[tauri::command]
+pub async fn set_global_policy(kind: PolicyKind, app: AppHandle) -> Result<(), String> {
+    write_policies(&app, |p| p.global = kind)
+}
+
+#[tauri::command]
+pub async fn set_distro_policy(
+    distro: String,
+    kind: PolicyKind,
+    app: AppHandle,
+) -> Result<(), String> {
+    write_policies(&app, |p| {
+        p.per_distro.insert(
+            distro,
+            PolicyRule {
+                kind,
+                include_subdirectories: false,
+                created_at: now_iso(),
+            },
+        );
+    })
+}
+
+#[tauri::command]
+pub async fn remove_distro_policy(distro: String, app: AppHandle) -> Result<(), String> {
+    write_policies(&app, |p| {
+        p.per_distro.remove(&distro);
+    })
+}
+
+#[tauri::command]
+pub async fn set_folder_policy(
+    path: String,
+    kind: PolicyKind,
+    include_subdirectories: bool,
+    app: AppHandle,
+) -> Result<(), String> {
+    let key = path_norm::normalize_user_path(&path);
+    write_policies(&app, |p| {
+        p.per_folder.insert(
+            key,
+            PolicyRule {
+                kind,
+                include_subdirectories,
+                created_at: now_iso(),
+            },
+        );
+    })
+}
+
+#[tauri::command]
+pub async fn remove_folder_policy(path: String, app: AppHandle) -> Result<(), String> {
+    let key = path_norm::normalize_user_path(&path);
+    write_policies(&app, |p| {
+        p.per_folder.remove(&key);
+    })
+}
+
+#[tauri::command]
+pub async fn set_session_policy(
+    session_id: String,
+    kind: PolicyKind,
+    app: AppHandle,
+) -> Result<(), String> {
+    let ctx = session_ctx::get(&session_id)
+        .ok_or_else(|| format!("unknown session_id: {}", session_id))?;
+    write_policies(&app, |p| {
+        policy::push_session_rule(
+            p,
+            SessionRule {
+                session_id: session_id.clone(),
+                session_cwd: ctx.start_cwd_normalized.clone(),
+                distro: ctx.distro.clone(),
+                kind,
+                created_at: now_iso(),
+            },
+        );
+    })
+}
+
+#[tauri::command]
+pub async fn remove_session_policy(session_id: String, app: AppHandle) -> Result<(), String> {
+    write_policies(&app, |p| {
+        p.per_session.retain(|r| r.session_id != session_id);
+    })
+}
+
+#[tauri::command]
+pub async fn promote_session_to_folder(
+    session_id: String,
+    include_subdirectories: bool,
+    app: AppHandle,
+) -> Result<(), String> {
+    let rule = {
+        let current = app_settings::get();
+        current
+            .approval_policies
+            .per_session
+            .iter()
+            .find(|r| r.session_id == session_id)
+            .cloned()
+            .ok_or_else(|| format!("no session rule for {}", session_id))?
+    };
+    write_policies(&app, |p| {
+        p.per_folder.insert(
+            rule.session_cwd.clone(),
+            PolicyRule {
+                kind: rule.kind,
+                include_subdirectories,
+                created_at: now_iso(),
+            },
+        );
+        p.per_session.retain(|r| r.session_id != session_id);
+    })
+}
+
+#[tauri::command]
+pub async fn list_recent_sessions() -> Vec<RecentSession> {
+    let policies = app_settings::get().approval_policies;
+    session_ctx::recent(SESSION_RULE_CAP)
+        .into_iter()
+        .map(|s| {
+            let rule_kind = policies
+                .per_session
+                .iter()
+                .find(|r| r.session_id == s.session_id)
+                .map(|r| r.kind);
+            RecentSession {
+                session_id: s.session_id,
+                start_cwd_normalized: s.start_cwd_normalized,
+                distro: s.distro,
+                last_seen_at_ms: s.last_seen_at_ms,
+                rule_kind,
+            }
+        })
+        .collect()
+}
+
+#[derive(serde::Serialize)]
+pub struct RecentSession {
+    pub session_id: String,
+    pub start_cwd_normalized: String,
+    pub distro: String,
+    pub last_seen_at_ms: u128,
+    pub rule_kind: Option<PolicyKind>,
 }
