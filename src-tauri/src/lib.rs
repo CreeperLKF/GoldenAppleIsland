@@ -84,6 +84,14 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            // Apply always_on_top from persisted settings
+            if let Some(win) = app.get_webview_window("main") {
+                let prefs = app_settings::get();
+                if prefs.always_on_top {
+                    let _ = win.set_always_on_top(true);
+                }
+            }
+
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 ws::serve(app_handle).await;
