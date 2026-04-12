@@ -20,6 +20,18 @@
   --badge-read-text: #6E6E73;
   --badge-tool-bg: #F5F5F3;
   --badge-tool-text: #6E6E73;
+  --badge-question-bg: #F3E8FD;
+  --badge-question-text: #7B1FA2;
+  --badge-permission-bg: #FFF8E1;
+  --badge-permission-text: #F57F17;
+
+  --input-bg: #FFFFFF;
+  --input-border: rgba(0, 0, 0, 0.15);
+  --input-text: #1D1D1F;
+  --input-placeholder: #AEAEB2;
+
+  --session-approve-bg: #E3F2FD;
+  --session-approve-text: #1565C0;
 
   --accent-green: #34C759;
   --accent-amber: #FF9F0A;
@@ -54,6 +66,18 @@
   --badge-read-text: #A1A1A6;
   --badge-tool-bg: #2C2C2E;
   --badge-tool-text: #A1A1A6;
+  --badge-question-bg: #2A1540;
+  --badge-question-text: #CE93D8;
+  --badge-permission-bg: #3A3010;
+  --badge-permission-text: #FFD54F;
+
+  --input-bg: #1C1C1E;
+  --input-border: rgba(255, 255, 255, 0.15);
+  --input-text: #F5F5F7;
+  --input-placeholder: #636366;
+
+  --session-approve-bg: #0D2744;
+  --session-approve-text: #64B5F6;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -79,5 +103,17 @@
     --badge-read-text: #A1A1A6;
     --badge-tool-bg: #2C2C2E;
     --badge-tool-text: #A1A1A6;
+    --badge-question-bg: #2A1540;
+    --badge-question-text: #CE93D8;
+    --badge-permission-bg: #3A3010;
+    --badge-permission-text: #FFD54F;
+
+    --input-bg: #1C1C1E;
+    --input-border: rgba(255, 255, 255, 0.15);
+    --input-text: #F5F5F7;
+    --input-placeholder: #636366;
+
+    --session-approve-bg: #0D2744;
+    --session-approve-text: #64B5F6;
   }
 }
