@@ -1,5 +1,6 @@
 mod app_settings;
 mod commands;
+mod file_logger;
 mod ws;
 mod wsl_admin;
 mod windows_hook;
@@ -16,11 +17,18 @@ static SHOW_CHECK: OnceLock<CheckMenuItem<Wry>> = OnceLock::new();
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .format_timestamp_millis()
-        .init();
-    log::info!("Claude Hook Guard starting up");
+    // Load settings early (before logger) so we know whether to log to file.
     app_settings::init();
+    let prefs = app_settings::get();
+
+    if prefs.log_to_file {
+        file_logger::init_with_file();
+    } else {
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+            .format_timestamp_millis()
+            .init();
+    }
+    log::info!("Golden Apple Island starting up (log_to_file={})", prefs.log_to_file);
 
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
@@ -37,6 +45,9 @@ pub fn run() {
             commands::check_wsl_distro_status,
             commands::set_hook_enabled,
             commands::set_hook_enabled_all,
+            commands::update_wsl_scripts,
+            commands::write_log,
+            commands::get_log_dir,
             commands::open_settings_window,
             commands::get_windows_hook_status,
             commands::set_windows_hook_enabled,
@@ -50,7 +61,7 @@ pub fn run() {
             let menu = Menu::with_items(app, &[&show_item, &settings_item, &quit_item])?;
 
             let _tray = TrayIconBuilder::with_id("main")
-                .tooltip("Claude Hook Guard")
+                .tooltip("Golden Apple Island")
                 .icon(app.default_window_icon().cloned().unwrap())
                 .menu(&menu)
                 .show_menu_on_left_click(false)

@@ -3,7 +3,7 @@ import Toggle from "./ui/Toggle";
 import type { WslDistroWithStatus } from "../types/settings";
 
 export default function WslInstancesSection() {
-  const { distros, loading, error, busy, refresh, checkDistro, setEnabled, setAll } =
+  const { distros, loading, error, busy, updating, refresh, checkDistro, setEnabled, setAll, updateScripts } =
     useWslDistros();
 
   return (
@@ -23,6 +23,22 @@ export default function WslInstancesSection() {
             style={{ fontSize: 11 }}
           >
             Refresh
+          </button>
+          <button
+            type="button"
+            onClick={updateScripts}
+            disabled={loading || updating || distros.length === 0}
+            className="rounded border hover:brightness-95 disabled:opacity-40"
+            style={{
+              fontSize: 11,
+              height: 22,
+              padding: "0 8px",
+              borderColor: "var(--border)",
+              color: "var(--text-secondary)",
+              background: "var(--bg-elevated)",
+            }}
+          >
+            {updating ? "Updating…" : "Update scripts"}
           </button>
           <button
             type="button"

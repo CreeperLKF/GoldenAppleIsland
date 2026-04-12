@@ -2,6 +2,7 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Window};
 
 use crate::app_settings::{self, AppSettings};
+use crate::file_logger;
 use crate::ws;
 use crate::wsl_admin::{self, BulkResult, HookStatus, WslDistroWithStatus};
 
@@ -20,9 +21,9 @@ pub fn get_pending_events() -> Vec<ws::HookEvent> {
 #[tauri::command]
 pub fn set_pending_count(count: u32, app: AppHandle) {
     let tooltip = if count == 0 {
-        "Claude Hook Guard".to_string()
+        "Golden Apple Island".to_string()
     } else {
-        format!("Claude Hook Guard - {} pending", count)
+        format!("Golden Apple Island - {} pending", count)
     };
     update_tray_badge(&app, &tooltip, count);
 }
@@ -66,6 +67,9 @@ pub fn update_app_settings(patch: Value) -> AppSettings {
     if let Some(b) = patch.get("collapsed").and_then(|v| v.as_bool()) {
         current.collapsed = b;
     }
+    if let Some(b) = patch.get("log_to_file").and_then(|v| v.as_bool()) {
+        current.log_to_file = b;
+    }
     if let Some(p) = patch.get("port").and_then(|v| v.as_u64()) {
         let new_port = p as u16;
         if new_port != current.port {
@@ -101,6 +105,11 @@ pub async fn set_hook_enabled_all(enabled: bool) -> Vec<BulkResult> {
 }
 
 #[tauri::command]
+pub async fn update_wsl_scripts() -> Vec<BulkResult> {
+    wsl_admin::update_scripts_all().await
+}
+
+#[tauri::command]
 pub async fn list_wsl_distros_smart() -> Result<Vec<WslDistroWithStatus>, String> {
     wsl_admin::list_distros_smart().await
 }
@@ -120,7 +129,7 @@ pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
     }
 
     WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("index.html#/settings".into()))
-        .title("Claude Hook Guard — Settings")
+        .title("Golden Apple Island — Settings")
         .inner_size(480.0, 640.0)
         .min_inner_size(420.0, 480.0)
         .resizable(true)
@@ -131,6 +140,16 @@ pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
         .build()
         .map_err(|e| format!("failed to open settings window: {}", e))?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn write_log(level: String, message: String) {
+    file_logger::write_frontend_log(&level, &message);
+}
+
+#[tauri::command]
+pub fn get_log_dir() -> String {
+    app_settings::log_dir().to_string_lossy().into_owned()
 }
 
 #[tauri::command]

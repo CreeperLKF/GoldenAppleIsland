@@ -110,7 +110,7 @@ pub async fn serve(app: AppHandle) {
             return;
         }
     };
-    log::info!("Claude Hook Guard WS listening on {}", bind_addr);
+    log::info!("Golden Apple Island WS listening on {}", bind_addr);
 
     loop {
         match listener.accept().await {
@@ -196,7 +196,7 @@ async fn handle_connection(
             let mut builder = app
                 .notification()
                 .builder()
-                .title("Claude Code needs approval")
+                .title("Golden Apple Island — approval needed")
                 .body(body);
             if !prefs.sound_enabled {
                 // Tauri v2 notification builder: empty/silent sound maps to

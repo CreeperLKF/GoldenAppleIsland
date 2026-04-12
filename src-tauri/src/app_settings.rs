@@ -32,6 +32,8 @@ pub struct AppSettings {
     #[serde(default = "default_port")]
     pub port: u16,
     #[serde(default)]
+    pub log_to_file: bool,
+    #[serde(default)]
     pub wsl_status_cache: HashMap<String, CachedHookStatus>,
     #[serde(default)]
     pub windows_hook_cache: Option<CachedHookStatus>,
@@ -49,6 +51,7 @@ impl Default for AppSettings {
             always_on_top: true,
             collapsed: false,
             port: 19876,
+            log_to_file: false,
             wsl_status_cache: HashMap::new(),
             windows_hook_cache: None,
         }
@@ -63,7 +66,27 @@ fn cell() -> &'static RwLock<AppSettings> {
 
 pub fn path() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    base.join("claude-hook-guard").join("settings.json")
+    base.join("golden-apple-island").join("settings.json")
+}
+
+pub fn log_dir() -> PathBuf {
+    let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
+    base.join("golden-apple-island").join("logs")
+}
+
+/// Rotate log files: delete .prev, rename current → .prev, return path for new log.
+pub fn rotate_logs() -> std::io::Result<PathBuf> {
+    let dir = log_dir();
+    fs::create_dir_all(&dir)?;
+    let current = dir.join("guard.log");
+    let prev = dir.join("guard.log.prev");
+    if prev.exists() {
+        fs::remove_file(&prev)?;
+    }
+    if current.exists() {
+        fs::rename(&current, &prev)?;
+    }
+    Ok(current)
 }
 
 fn load() -> AppSettings {

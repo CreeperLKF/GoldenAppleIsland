@@ -1,16 +1,16 @@
 [package]
-name = "claude-hook-guard"
+name = "golden-apple-island"
 version = "0.1.0"
-description = "Claude Hook Guard - system tray approval UI for Claude Code hooks"
+description = "Golden Apple Island - system tray approval UI for Claude Code hooks"
 edition = "2021"
 rust-version = "1.77"
 
 [lib]
-name = "claude_hook_guard_lib"
+name = "golden_apple_island_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "claude-hook-guard"
+name = "golden-apple-island"
 path = "src/main.rs"
 
 [build-dependencies]
@@ -29,6 +29,7 @@ dashmap = "6"
 log = "0.4"
 env_logger = "0.11"
 dirs = "5"
+chrono = "0.4"
 regex = "1"
 
 [features]

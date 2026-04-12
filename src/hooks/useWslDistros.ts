@@ -100,5 +100,24 @@ export function useWslDistros() {
     [refresh],
   );
 
-  return { ...state, busy, refresh, checkDistro, setEnabled, setAll };
+  const [updating, setUpdating] = useState(false);
+
+  const updateScripts = useCallback(async (): Promise<BulkResult[]> => {
+    setUpdating(true);
+    try {
+      const results = await invoke<BulkResult[]>("update_wsl_scripts");
+      await refresh();
+      return results;
+    } catch (e) {
+      setState((s) => ({
+        ...s,
+        error: e instanceof Error ? e.message : String(e),
+      }));
+      return [];
+    } finally {
+      setUpdating(false);
+    }
+  }, [refresh]);
+
+  return { ...state, busy, updating, refresh, checkDistro, setEnabled, setAll, updateScripts };
 }

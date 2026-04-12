@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Claude Hook Guard",
+  "productName": "Golden Apple Island",
   "version": "0.1.0",
   "identifier": "com.goldenappleisland.claudehookguard",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Claude Hook Guard",
+        "title": "Golden Apple Island",
         "width": 400,
         "height": 600,
         "visible": false,
@@ -38,7 +38,7 @@
     "publisher": "Golden Apple Island",
     "category": "DeveloperTool",
     "shortDescription": "Approval UI for Claude Code hooks running in WSL",
-    "longDescription": "Claude Hook Guard is a Windows system tray app that intercepts Claude Code hook events from WSL and presents them as one-click approval cards, replacing the need to babysit terminal windows during long coding sessions.",
+    "longDescription": "Golden Apple Island is a Windows system tray app that intercepts Claude Code hook events from WSL and presents them as one-click approval cards, replacing the need to babysit terminal windows during long coding sessions.",
     "copyright": "Copyright (c) 2026 Golden Apple Island",
     "licenseFile": "../LICENSE",
     "homepage": "https://github.com/CreeperLKF/GoldenAppleIsland",

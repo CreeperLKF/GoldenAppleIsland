@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import log from "../lib/log";
 import type { HookEvent } from "../types/events";
 
 const FADE_MS = 200;
@@ -22,7 +23,7 @@ export function usePendingEvents(options: UsePendingEventsOptions = {}) {
     const visibleCount = pending.filter((e) => !resolving.has(e.id)).length;
     if (visibleCount !== lastCountRef.current) {
       lastCountRef.current = visibleCount;
-      invoke("set_pending_count", { count: visibleCount }).catch(() => {});
+      invoke("set_pending_count", { count: visibleCount }).catch(log.error);
     }
   }, [pending, resolving]);
 
@@ -36,7 +37,8 @@ export function usePendingEvents(options: UsePendingEventsOptions = {}) {
   const resolve = useCallback(
     (id: string, action: ResolveAction) => {
       const event = pendingRef.current.find((e) => e.id === id);
-      invoke("respond", { id, action }).catch(() => {});
+      log.info(`resolve id=${id} action=${action}`);
+      invoke("respond", { id, action }).catch(log.error);
       if (event && onResolve) onResolve(event, action);
       setResolving((prev) => {
         const next = new Set(prev);

@@ -15,7 +15,7 @@ const version = pkg.version;
 
 const outDirArg = process.argv[2] ?? "dist-wsl";
 const outDir = resolve(repoRoot, outDirArg);
-const outFileName = `claude-hook-guard-wsl-${version}.tar.gz`;
+const outFileName = `golden-apple-island-wsl-${version}.tar.gz`;
 const outFileRel = `${outDirArg.replace(/\\/g, "/")}/${outFileName}`;
 
 if (!existsSync(join(repoRoot, "wsl"))) {

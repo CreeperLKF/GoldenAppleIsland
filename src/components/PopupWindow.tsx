@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import log from "../lib/log";
 import Header from "./Header";
 import SessionStrip from "./SessionStrip";
 import ApprovalCard from "./ApprovalCard";
@@ -56,6 +57,7 @@ export default function PopupWindow() {
   const enqueueWithAuto = useCallback(
     (event: HookEvent) => {
       if (autoApproveRef.current) {
+        log.info(`auto-approve id=${event.id} tool=${event.tool_name}`);
         window.setTimeout(() => resolve(event.id, "approve"), 0);
         pushHistory({
           id: event.id,
@@ -66,6 +68,7 @@ export default function PopupWindow() {
         });
         return;
       }
+      log.info(`enqueue id=${event.id} tool=${event.tool_name}`);
       enqueue(event);
     },
     [enqueue, resolve, pushHistory],
@@ -98,7 +101,7 @@ export default function PopupWindow() {
 
   const togglePin = useCallback(() => {
     const next = !pinned;
-    getCurrentWindow().setAlwaysOnTop(next).catch(() => {});
+    getCurrentWindow().setAlwaysOnTop(next).catch(log.error);
     updateSettings({ always_on_top: next });
   }, [pinned, updateSettings]);
 
@@ -128,7 +131,7 @@ export default function PopupWindow() {
 
       if (e.key === "Escape") {
         e.preventDefault();
-        invoke("hide_popup").catch(() => {});
+        invoke("hide_popup").catch(log.error);
         return;
       }
       if (e.key === "a" || e.key === "A") {
@@ -149,7 +152,7 @@ export default function PopupWindow() {
     return () => window.removeEventListener("keydown", onKey);
   }, [approveTop, denyTop, approveAll]);
 
-  const showQuickActions = connected || visible.length > 0;
+  const showQuickActions = connected || visible.length > 0 || autoApprove;
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -163,7 +166,7 @@ export default function PopupWindow() {
       const height = Math.min(600, Math.max(80, Math.ceil(entry.borderBoxSize[0].blockSize)));
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
-        getCurrentWindow().setSize(new LogicalSize(400, height)).catch(() => {});
+        getCurrentWindow().setSize(new LogicalSize(400, height)).catch(log.error);
       }, 50);
     });
     observer.observe(el);

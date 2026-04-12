@@ -316,6 +316,37 @@ async fn ensure_scripts(distro: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub async fn update_scripts(distro: &str) -> Result<(), String> {
+    ensure_scripts(distro).await
+}
+
+pub async fn update_scripts_all() -> Vec<BulkResult> {
+    let distros = match list_distros().await {
+        Ok(d) => d,
+        Err(e) => {
+            return vec![BulkResult {
+                distro: String::from("<list>"),
+                ok: false,
+                error: Some(e),
+            }]
+        }
+    };
+    let mut out = Vec::with_capacity(distros.len());
+    for d in distros {
+        let res = ensure_scripts(&d.name).await;
+        let (ok, error) = match res {
+            Ok(_) => (true, None),
+            Err(e) => (false, Some(e)),
+        };
+        out.push(BulkResult {
+            distro: d.name,
+            ok,
+            error,
+        });
+    }
+    out
+}
+
 pub async fn enable_hook(distro: &str) -> Result<(), String> {
     ensure_scripts(distro).await?;
     let mut settings = read_settings(distro).await?;

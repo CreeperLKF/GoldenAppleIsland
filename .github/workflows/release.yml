@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: claude-hook-guard-${{ github.ref_name }}
+          name: golden-apple-island-${{ github.ref_name }}
           path: artifacts/*
 
       - name: Create GitHub Release

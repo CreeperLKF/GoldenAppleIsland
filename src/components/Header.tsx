@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import log from "../lib/log";
 
 interface HeaderProps {
   pendingCount: number;
@@ -28,7 +29,7 @@ export default function Header({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if ((e.target as HTMLElement).closest("button")) return;
-      getCurrentWindow().startDragging().catch(console.error);
+      getCurrentWindow().startDragging().catch(log.error);
     },
     [],
   );
@@ -53,7 +54,7 @@ export default function Header({
           className="font-semibold text-[var(--text-primary)]"
           style={{ fontSize: 13 }}
         >
-          Claude Hook Guard
+          Golden Apple Island
         </span>
       </div>
       <div className="flex items-center gap-1">

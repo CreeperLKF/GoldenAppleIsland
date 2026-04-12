@@ -4,6 +4,7 @@ export interface AppSettings {
   always_on_top: boolean;
   collapsed: boolean;
   port: number;
+  log_to_file: boolean;
   wsl_status_cache: Record<string, CachedHookStatus>;
   windows_hook_cache: CachedHookStatus | null;
 }

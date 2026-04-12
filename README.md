@@ -1,4 +1,4 @@
-# Claude Hook Guard
+# Golden Apple Island
 
 A lightweight Windows system tray app that intercepts Claude Code hook events from WSL and surfaces them as one-click approval cards — so you never have to babysit a terminal tab again.
 
@@ -6,24 +6,24 @@ Built with Tauri v2, React, and Tailwind CSS.
 
 ## Why
 
-When Claude Code runs in WSL, every tool call (shell command, file write, file read) requires you to switch to the terminal and confirm. Running multiple sessions in parallel turns approval into a juggling act. Claude Hook Guard moves that approval to a native Windows popup anchored to the tray, with approve/deny buttons, a Windows toast, and a 5-minute auto-deny timeout.
+When Claude Code runs in WSL, every tool call (shell command, file write, file read) requires you to switch to the terminal and confirm. Running multiple sessions in parallel turns approval into a juggling act. Golden Apple Island moves that approval to a native Windows popup anchored to the tray, with approve/deny buttons, a Windows toast, and a 5-minute auto-deny timeout.
 
 ## How it works
 
 ```
 WSL (Linux)                                Windows
 ─────────────                              ──────────────────────
-Claude Code                                Claude Hook Guard
+Claude Code                                Golden Apple Island
    │                                          ▲
    ▼                                          │
 pre-tool-use.sh  ──►  bridge.mjs  ══ ws ═══►  WebSocket server
-   ▲                                          │   (localhost:9876)
+   ▲                                          │   (localhost:19876)
    │                                          ▼
    └──── exit 0/1 ◄── approve/deny ◄──  Approval popup + tray
 ```
 
 1. A bash hook script in WSL catches the pre-tool-use event.
-2. A zero-dependency Node bridge forwards the event over `ws://localhost:9876`.
+2. A zero-dependency Node bridge forwards the event over `ws://localhost:19876`.
 3. The Tauri app shows a toast and an approval card.
 4. Your click routes back over the same WebSocket, the hook exits 0 (approve) or 1 (deny), and Claude Code continues.
 
@@ -42,7 +42,7 @@ npm install
 npm run tauri build
 ```
 
-The built `.msi` installer lands in `src-tauri/target/release/bundle/msi/`. Install it and launch **Claude Hook Guard** — it will appear in your system tray.
+The built `.msi` installer lands in `src-tauri/target/release/bundle/msi/`. Install it and launch **Golden Apple Island** — it will appear in your system tray.
 
 Prerequisites: Node 20+, Rust (via `rustup`), and the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for Windows (MSVC build tools + WebView2).
 
@@ -61,7 +61,7 @@ Prerequisite: Node 22+ in WSL (required for the global `WebSocket` client).
 
 ## Usage
 
-1. Keep Claude Hook Guard running in the Windows tray.
+1. Keep Golden Apple Island running in the Windows tray.
 2. Start `claude` in WSL as usual.
 3. When Claude Code wants to run a tool, a toast appears and the tray popup shows a card: tool category, the command or file path, and approve/deny buttons.
 4. Click once. The WSL session unblocks immediately.
@@ -116,7 +116,7 @@ GoldenAppleIsland/
 
 ## WebSocket protocol
 
-The app listens on `127.0.0.1:9876`. Messages are JSON.
+The app listens on `127.0.0.1:19876`. Messages are JSON.
 
 **Bridge → app:**
 
@@ -174,7 +174,7 @@ Pushing a `v*` tag triggers `.github/workflows/release.yml`, which on a Windows 
 ```bash
 npm install
 npm run tauri:build     # produces MSI + NSIS under src-tauri/target/release/bundle/
-npm run bundle:wsl      # produces dist-wsl/claude-hook-guard-wsl-<version>.tar.gz
+npm run bundle:wsl      # produces dist-wsl/golden-apple-island-wsl-<version>.tar.gz
 ```
 
 ### Scripts

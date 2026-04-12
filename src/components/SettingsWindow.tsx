@@ -1,4 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import log from "../lib/log";
+import LoggingSection from "./LoggingSection";
 import NotificationsSection from "./NotificationsSection";
 import PortSection from "./PortSection";
 import WindowsHookSection from "./WindowsHookSection";
@@ -9,7 +11,7 @@ export default function SettingsWindow() {
   const { settings, loading, error, update } = useAppSettings();
 
   const close = () => {
-    getCurrentWindow().close().catch(() => {});
+    getCurrentWindow().close().catch(log.error);
   };
 
   return (
@@ -84,6 +86,8 @@ export default function SettingsWindow() {
             <WslInstancesSection />
             <div style={{ borderTop: "0.5px solid var(--border)", margin: "0 16px" }} />
             <PortSection settings={settings} onChange={update} />
+            <div style={{ borderTop: "0.5px solid var(--border)", margin: "0 16px" }} />
+            <LoggingSection settings={settings} onChange={update} />
           </>
         )}
       </div>

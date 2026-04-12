@@ -7,7 +7,7 @@ const WS_URL = `ws://localhost:${WS_PORT}`;
 const TIMEOUT_MS = Number.parseInt(process.env.CLAUDE_HOOK_GUARD_TIMEOUT_MS ?? '', 10) || 300000;
 
 function emitDeny(reason) {
-  if (reason) process.stderr.write(`[claude-hook-guard] ${reason}\n`);
+  if (reason) process.stderr.write(`[golden-apple-island] ${reason}\n`);
   process.stdout.write('deny');
   process.exit(0);
 }
