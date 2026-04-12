@@ -6,15 +6,55 @@ const WS_PORT = 19876;
 const WS_URL = `ws://localhost:${WS_PORT}`;
 const TIMEOUT_MS = Number.parseInt(process.env.CLAUDE_HOOK_GUARD_TIMEOUT_MS ?? '', 10) || 300000;
 
+// Parse --hook-type arg (default: pre_tool_use)
+const hookTypeArg = process.argv.find(a => a.startsWith('--hook-type='));
+const HOOK_TYPE = hookTypeArg ? hookTypeArg.split('=')[1] : 'pre_tool_use';
+
 function emitDeny(reason) {
   if (reason) process.stderr.write(`[golden-apple-island] ${reason}\n`);
-  process.stdout.write('deny');
+  const json = buildResponseJson('deny', null, null);
+  process.stdout.write(json);
+  process.exit(2);
+}
+
+function emitResponse(action, answer, sessionMode) {
+  const json = buildResponseJson(action, answer, sessionMode);
+  process.stdout.write(json);
   process.exit(0);
 }
 
-function emitApproveDeny(action) {
-  process.stdout.write(action === 'approve' ? 'approve' : 'deny');
-  process.exit(0);
+function buildResponseJson(action, answer, sessionMode) {
+  if (HOOK_TYPE === 'permission_request') {
+    return buildPermissionRequestJson(action, sessionMode);
+  }
+  return buildPreToolUseJson(action, answer);
+}
+
+function buildPreToolUseJson(action, answer) {
+  const output = {
+    hookEventName: 'PreToolUse',
+    permissionDecision: action === 'approve' ? 'allow' : 'deny',
+    permissionDecisionReason: action === 'approve'
+      ? 'Approved via Golden Apple Island'
+      : 'Denied via Golden Apple Island',
+  };
+  if (answer != null) {
+    output.updatedInput = { answer };
+  }
+  return JSON.stringify({ hookSpecificOutput: output });
+}
+
+function buildPermissionRequestJson(action, sessionMode) {
+  const decision = { behavior: action === 'approve' ? 'allow' : 'deny' };
+  if (action !== 'approve') {
+    decision.message = 'Denied via Golden Apple Island';
+  }
+  if (action === 'approve' && sessionMode) {
+    decision.updatedPermissions = [
+      { type: 'setMode', mode: sessionMode, destination: 'session' },
+    ];
+  }
+  return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PermissionRequest', decision } });
 }
 
 async function readStdin() {
@@ -58,7 +98,7 @@ async function main() {
     id,
     session_id: sessionId,
     session_cwd: cwd,
-    hook_type: 'pre_tool_use',
+    hook_type: HOOK_TYPE,
     tool_name: toolName,
     tool_input: toolInput,
     timestamp: new Date().toISOString(),
@@ -73,25 +113,25 @@ async function main() {
   }
 
   let settled = false;
-  const finish = (action, reason) => {
+  const finish = (action, answer, sessionMode, reason) => {
     if (settled) return;
     settled = true;
     try { ws.close(); } catch { /* ignore */ }
     clearTimeout(timer);
     if (action === 'approve' || action === 'deny') {
-      emitApproveDeny(action);
+      emitResponse(action, answer, sessionMode);
     } else {
       emitDeny(reason);
     }
   };
 
-  const timer = setTimeout(() => finish('deny', `timeout after ${TIMEOUT_MS}ms waiting for hook_response`), TIMEOUT_MS);
+  const timer = setTimeout(() => finish(null, null, null, `timeout after ${TIMEOUT_MS}ms waiting for hook_response`), TIMEOUT_MS);
 
   ws.addEventListener('open', () => {
     try {
       ws.send(JSON.stringify(event));
     } catch (err) {
-      finish('deny', `send failed: ${err?.message ?? err}`);
+      finish(null, null, null, `send failed: ${err?.message ?? err}`);
     }
   });
 
@@ -104,16 +144,17 @@ async function main() {
       return;
     }
     if (data && data.type === 'hook_response' && data.id === id) {
-      finish(data.action === 'approve' ? 'approve' : 'deny');
+      const action = data.action === 'approve' ? 'approve' : 'deny';
+      finish(action, data.answer ?? null, data.session_mode ?? null);
     }
   });
 
   ws.addEventListener('error', (ev) => {
-    finish('deny', `websocket error: ${ev?.message ?? 'connection failed'}`);
+    finish(null, null, null, `websocket error: ${ev?.message ?? 'connection failed'}`);
   });
 
   ws.addEventListener('close', () => {
-    if (!settled) finish('deny', 'websocket closed before response');
+    if (!settled) finish(null, null, null, 'websocket closed before response');
   });
 }
 
