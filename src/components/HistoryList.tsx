@@ -17,12 +17,13 @@ function formatAgo(iso: string, now: number): string {
   return `${Math.floor(hrs / 24)}d`;
 }
 
-function statusGlyph(action: HistoryEntry["action"]): {
+function statusGlyph(item: HistoryEntry): {
   glyph: string;
   color: string;
 } {
-  if (action === "approve") return { glyph: "✓", color: "var(--approve-text)" };
-  if (action === "deny") return { glyph: "✗", color: "var(--deny-text)" };
+  if (item.answer) return { glyph: "💬", color: "var(--badge-question-text)" };
+  if (item.action === "approve") return { glyph: "✓", color: "var(--approve-text)" };
+  if (item.action === "deny") return { glyph: "✗", color: "var(--deny-text)" };
   return { glyph: "◷", color: "var(--text-tertiary)" };
 }
 
@@ -56,7 +57,7 @@ export default function HistoryList({ items }: HistoryListProps) {
       </div>
       <ul className="flex flex-col" style={{ gap: 0 }}>
         {visible.map((item) => {
-          const { glyph, color } = statusGlyph(item.action);
+          const { glyph, color } = statusGlyph(item);
           return (
             <li
               key={item.id}

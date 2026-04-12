@@ -5,6 +5,7 @@ import log from "../lib/log";
 import Header from "./Header";
 import SessionStrip from "./SessionStrip";
 import ApprovalCard from "./ApprovalCard";
+import QuestionCard from "./QuestionCard";
 import EmptyState from "./EmptyState";
 import QuickActions from "./QuickActions";
 import HistoryList from "./HistoryList";
@@ -15,11 +16,14 @@ import { useHistory } from "../hooks/useHistory";
 import { useAutoApprove } from "../hooks/useAutoApprove";
 import { useAppSettings } from "../hooks/useAppSettings";
 import type { HookEvent } from "../types/events";
+import { detectVariant } from "../types/events";
 
 const APPROVE_ALL_STAGGER_MS = 50;
 
 function summarize(event: HookEvent): string {
   const input = event.tool_input as Record<string, unknown>;
+  if (typeof input.question === "string") return input.question.slice(0, 60);
+  if (typeof input.prompt === "string") return input.prompt.slice(0, 60);
   if (typeof input.command === "string") return input.command;
   if (typeof input.file_path === "string") return input.file_path;
   if (typeof input.path === "string") return input.path;
@@ -33,13 +37,14 @@ export default function PopupWindow() {
   const { clientCount } = useConnection();
 
   const onResolve = useCallback(
-    (event: HookEvent, action: "approve" | "deny") => {
+    (event: HookEvent, action: "approve" | "deny", answer?: string) => {
       pushHistory({
         id: event.id,
         tool_name: event.tool_name,
         summary: summarize(event),
         action,
         timestamp: new Date().toISOString(),
+        answer,
       });
     },
     [pushHistory],
@@ -203,15 +208,34 @@ export default function PopupWindow() {
             {visible.length === 0 ? (
               <EmptyState connected={connected} />
             ) : (
-              pending.map((event) => (
-                <ApprovalCard
-                  key={event.id}
-                  event={event}
-                  resolving={resolving.has(event.id)}
-                  onApprove={() => resolve(event.id, "approve")}
-                  onDeny={() => resolve(event.id, "deny")}
-                />
-              ))
+              pending.map((event) => {
+                const variant = detectVariant(event);
+                if (variant === "question") {
+                  return (
+                    <QuestionCard
+                      key={event.id}
+                      event={event}
+                      resolving={resolving.has(event.id)}
+                      onSubmit={(answer) => resolve(event.id, "approve", answer)}
+                      onSkip={() => resolve(event.id, "deny")}
+                    />
+                  );
+                }
+                return (
+                  <ApprovalCard
+                    key={event.id}
+                    event={event}
+                    resolving={resolving.has(event.id)}
+                    onApprove={() => resolve(event.id, "approve")}
+                    onDeny={() => resolve(event.id, "deny")}
+                    onApproveSession={
+                      variant === "permission"
+                        ? () => resolve(event.id, "approve", undefined, "acceptEdits")
+                        : undefined
+                    }
+                  />
+                );
+              })
             )}
           </div>
 
