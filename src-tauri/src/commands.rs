@@ -7,8 +7,8 @@ use crate::ws;
 use crate::wsl_admin::{self, BulkResult, HookStatus, WslDistroWithStatus};
 
 #[tauri::command]
-pub async fn respond(id: String, action: String) {
-    ws::send_response(id, action).await;
+pub async fn respond(id: String, action: String, answer: Option<String>, session_mode: Option<String>) {
+    ws::send_response(id, action, answer, session_mode).await;
 }
 
 #[tauri::command]

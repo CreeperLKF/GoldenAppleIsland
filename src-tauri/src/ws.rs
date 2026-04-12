@@ -56,11 +56,15 @@ pub struct HookEvent {
     pub timestamp: String,
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HookResponse {
-    pub r#type: &'static str,
+    pub r#type: String,
     pub id: String,
     pub action: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub answer: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_mode: Option<String>,
 }
 
 type PendingMap = Arc<DashMap<String, mpsc::Sender<HookResponse>>>;
@@ -81,16 +85,18 @@ pub fn snapshot_queue() -> Vec<HookEvent> {
     queue().iter().map(|e| e.value().clone()).collect()
 }
 
-pub async fn send_response(id: String, action: String) {
+pub async fn send_response(id: String, action: String, answer: Option<String>, session_mode: Option<String>) {
     queue().remove(&id);
     let Some((_, tx)) = pending().remove(&id) else {
         log::warn!("send_response: no pending entry for id {}", id);
         return;
     };
     let resp = HookResponse {
-        r#type: "hook_response",
+        r#type: "hook_response".to_string(),
         id,
         action,
+        answer,
+        session_mode,
     };
     if let Err(e) = tx.send(resp).await {
         log::warn!("send_response: failed to forward response: {}", e);
@@ -219,9 +225,11 @@ async fn handle_connection(
                     pending().remove(&event_id);
                     queue().remove(&event_id);
                     HookResponse {
-                        r#type: "hook_response",
+                        r#type: "hook_response".to_string(),
                         id: event_id.clone(),
                         action: "deny".to_string(),
+                        answer: None,
+                        session_mode: None,
                     }
                 }
                 Err(_) => {
@@ -229,9 +237,11 @@ async fn handle_connection(
                     pending().remove(&event_id);
                     queue().remove(&event_id);
                     HookResponse {
-                        r#type: "hook_response",
+                        r#type: "hook_response".to_string(),
                         id: event_id.clone(),
                         action: "deny".to_string(),
+                        answer: None,
+                        session_mode: None,
                     }
                 }
             };
