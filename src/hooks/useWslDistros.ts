@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { BulkResult, WslDistroWithStatus } from "../types/settings";
+import type { BulkResult, HookStatus, WslDistroWithStatus } from "../types/settings";
 
 interface State {
   loading: boolean;
@@ -19,7 +19,7 @@ export function useWslDistros() {
   const refresh = useCallback(async () => {
     setState((s) => ({ ...s, loading: true, error: null }));
     try {
-      const distros = await invoke<WslDistroWithStatus[]>("list_wsl_distros");
+      const distros = await invoke<WslDistroWithStatus[]>("list_wsl_distros_smart");
       setState({ loading: false, distros, error: null });
     } catch (e) {
       setState({
@@ -34,13 +34,36 @@ export function useWslDistros() {
     refresh();
   }, [refresh]);
 
+  const checkDistro = useCallback(
+    async (distro: string) => {
+      setBusy((prev) => new Set(prev).add(distro));
+      try {
+        const status = await invoke<HookStatus>("check_wsl_distro_status", { distro });
+        setState((s) => ({
+          ...s,
+          distros: s.distros.map((d) =>
+            d.name === distro ? { ...d, status } : d,
+          ),
+        }));
+      } catch (e) {
+        setState((s) => ({
+          ...s,
+          error: `${distro}: ${e instanceof Error ? e.message : String(e)}`,
+        }));
+      } finally {
+        setBusy((prev) => {
+          const next = new Set(prev);
+          next.delete(distro);
+          return next;
+        });
+      }
+    },
+    [],
+  );
+
   const setEnabled = useCallback(
     async (distro: string, enabled: boolean) => {
-      setBusy((prev) => {
-        const next = new Set(prev);
-        next.add(distro);
-        return next;
-      });
+      setBusy((prev) => new Set(prev).add(distro));
       try {
         await invoke("set_hook_enabled", { distro, enabled });
         await refresh();
@@ -63,9 +86,7 @@ export function useWslDistros() {
   const setAll = useCallback(
     async (enabled: boolean): Promise<BulkResult[]> => {
       try {
-        const results = await invoke<BulkResult[]>("set_hook_enabled_all", {
-          enabled,
-        });
+        const results = await invoke<BulkResult[]>("set_hook_enabled_all", { enabled });
         await refresh();
         return results;
       } catch (e) {
@@ -79,5 +100,5 @@ export function useWslDistros() {
     [refresh],
   );
 
-  return { ...state, busy, refresh, setEnabled, setAll };
+  return { ...state, busy, refresh, checkDistro, setEnabled, setAll };
 }

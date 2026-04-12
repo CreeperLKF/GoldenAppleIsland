@@ -3,7 +3,7 @@ import Toggle from "./ui/Toggle";
 import type { WslDistroWithStatus } from "../types/settings";
 
 export default function WslInstancesSection() {
-  const { distros, loading, error, busy, refresh, setEnabled, setAll } =
+  const { distros, loading, error, busy, refresh, checkDistro, setEnabled, setAll } =
     useWslDistros();
 
   return (
@@ -94,6 +94,7 @@ export default function WslInstancesSection() {
             distro={d}
             busy={busy.has(d.name)}
             onToggle={(next) => setEnabled(d.name, next)}
+            onCheck={() => checkDistro(d.name)}
           />
         ))}
       </ul>
@@ -105,12 +106,15 @@ function DistroRow({
   distro,
   busy,
   onToggle,
+  onCheck,
 }: {
   distro: WslDistroWithStatus;
   busy: boolean;
   onToggle: (next: boolean) => void;
+  onCheck: () => void;
 }) {
-  const { name, is_default, version, status } = distro;
+  const { name, is_default, version, state, status } = distro;
+  const isRunning = state === "Running";
   const enabled = status.registered;
   const statusLabel = enabled
     ? status.scripts_installed
@@ -119,9 +123,7 @@ function DistroRow({
     : status.scripts_installed
       ? "Scripts installed, not registered"
       : "Not registered";
-  const statusColor = enabled
-    ? "var(--approve-text)"
-    : "var(--text-tertiary)";
+  const statusColor = enabled ? "var(--approve-text)" : "var(--text-tertiary)";
 
   return (
     <li
@@ -158,15 +160,37 @@ function DistroRow({
           <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
             WSL{version}
           </span>
+          <span
+            className="rounded"
+            style={{
+              fontSize: 10,
+              padding: "1px 6px",
+              background: isRunning ? "var(--approve-bg)" : "var(--bg-elevated)",
+              color: isRunning ? "var(--approve-text)" : "var(--text-tertiary)",
+              border: "0.5px solid var(--border)",
+            }}
+          >
+            {state}
+          </span>
         </div>
-        <span style={{ fontSize: 11, color: statusColor }}>{statusLabel}</span>
+        <div className="flex items-center" style={{ gap: 6 }}>
+          <span style={{ fontSize: 11, color: statusColor }}>{statusLabel}</span>
+          {!isRunning && (
+            <button
+              type="button"
+              onClick={onCheck}
+              disabled={busy}
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40"
+              style={{ fontSize: 10, textDecoration: "underline" }}
+            >
+              Check
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex items-center" style={{ gap: 8 }}>
         {busy && (
-          <span
-            className="text-[var(--text-tertiary)]"
-            style={{ fontSize: 11 }}
-          >
+          <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
             …
           </span>
         )}
