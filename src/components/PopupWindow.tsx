@@ -12,6 +12,7 @@ import { useWebSocket } from "../hooks/useWebSocket";
 import { useConnection } from "../hooks/useConnection";
 import { useHistory } from "../hooks/useHistory";
 import { useAutoApprove } from "../hooks/useAutoApprove";
+import { useAppSettings } from "../hooks/useAppSettings";
 import type { HookEvent } from "../types/events";
 
 const APPROVE_ALL_STAGGER_MS = 50;
@@ -84,6 +85,22 @@ export default function PopupWindow() {
   }, [visible]);
 
   const connected = clientCount > 0;
+
+  const { settings: appSettings, update: updateSettings } = useAppSettings();
+
+  const collapsed = appSettings?.collapsed ?? false;
+  const pinned = appSettings?.always_on_top ?? true;
+
+  const toggleCollapse = useCallback(() => {
+    const next = !collapsed;
+    updateSettings({ collapsed: next });
+  }, [collapsed, updateSettings]);
+
+  const togglePin = useCallback(() => {
+    const next = !pinned;
+    getCurrentWindow().setAlwaysOnTop(next).catch(() => {});
+    updateSettings({ always_on_top: next });
+  }, [pinned, updateSettings]);
 
   const approveTop = useCallback(() => {
     const top = visible[0];
@@ -167,34 +184,45 @@ export default function PopupWindow() {
         boxShadow: "0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.12)",
       }}
     >
-      <Header pendingCount={visible.length} connected={connected} />
-      {sharedCwd && <SessionStrip cwd={sharedCwd} autoApprove={autoApprove} />}
+      <Header
+        pendingCount={visible.length}
+        connected={connected}
+        pinned={pinned}
+        onTogglePin={togglePin}
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+      />
+      {!collapsed && (
+        <>
+          {sharedCwd && <SessionStrip cwd={sharedCwd} autoApprove={autoApprove} />}
 
-      <div className="flex-1 overflow-y-auto">
-        {visible.length === 0 ? (
-          <EmptyState connected={connected} />
-        ) : (
-          pending.map((event) => (
-            <ApprovalCard
-              key={event.id}
-              event={event}
-              resolving={resolving.has(event.id)}
-              onApprove={() => resolve(event.id, "approve")}
-              onDeny={() => resolve(event.id, "deny")}
+          <div className="flex-1 overflow-y-auto">
+            {visible.length === 0 ? (
+              <EmptyState connected={connected} />
+            ) : (
+              pending.map((event) => (
+                <ApprovalCard
+                  key={event.id}
+                  event={event}
+                  resolving={resolving.has(event.id)}
+                  onApprove={() => resolve(event.id, "approve")}
+                  onDeny={() => resolve(event.id, "deny")}
+                />
+              ))
+            )}
+          </div>
+
+          {showQuickActions && (
+            <QuickActions
+              pendingCount={visible.length}
+              autoApprove={autoApprove}
+              onToggleAutoApprove={toggleAutoApprove}
+              onApproveAll={approveAll}
             />
-          ))
-        )}
-      </div>
-
-      {showQuickActions && (
-        <QuickActions
-          pendingCount={visible.length}
-          autoApprove={autoApprove}
-          onToggleAutoApprove={toggleAutoApprove}
-          onApproveAll={approveAll}
-        />
+          )}
+          <HistoryList items={history} />
+        </>
       )}
-      <HistoryList items={history} />
     </div>
   );
 }
