@@ -4,6 +4,8 @@ use std::time::Duration;
 
 use std::sync::OnceLock;
 
+use crate::policy::{PolicyKind, PolicyScope};
+
 use dashmap::DashMap;
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
@@ -60,6 +62,10 @@ pub struct HookEvent {
     pub tool_name: String,
     pub tool_input: serde_json::Value,
     pub timestamp: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_kind: Option<PolicyKind>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_scope: Option<PolicyScope>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -188,18 +194,57 @@ async fn handle_connection(
         }
 
         let (tx, mut rx) = mpsc::channel::<HookResponse>(1);
-        pending().insert(event.id.clone(), tx);
-        queue().insert(event.id.clone(), event.clone());
+
+        // Run policy resolution before queueing.
+        let normalized_cwd =
+            crate::path_norm::normalize_event_cwd(&event.session_cwd, &event.source_distro);
+        crate::session_ctx::touch(&event.session_id, &normalized_cwd, &event.source_distro);
+
+        let ctx = crate::session_ctx::get(&event.session_id).expect("just touched");
+        let policies = crate::app_settings::get().approval_policies;
+        let resolved = crate::policy::resolve(&event, &ctx, &policies);
         log::info!(
-            "received hook_event id={} tool={} queue_len={}",
+            "received hook_event id={} tool={} resolved={:?}/{:?}",
             event.id,
             event.tool_name,
-            queue().len()
+            resolved.kind,
+            resolved.scope
         );
 
-        match app.emit("hook_event", event.clone()) {
-            Ok(_) => log::info!("emitted hook_event id={} to frontend", event.id),
-            Err(e) => log::warn!("emit hook_event failed: {}", e),
+        if resolved.kind == PolicyKind::Auto {
+            // Short-circuit: reply approve without queueing for the UI.
+            pending().insert(event.id.clone(), tx);
+            let resp = HookResponse {
+                r#type: "hook_response".to_string(),
+                id: event.id.clone(),
+                action: "approve".to_string(),
+                answer: None,
+                session_mode: None,
+            };
+            if let Some((_, chan)) = pending().remove(&event.id) {
+                let _ = chan.send(resp).await;
+            }
+            // Emit sidecar event so the frontend can log history with an `auto` badge.
+            if let Err(e) = app.emit(
+                "hook_event_auto_resolved",
+                serde_json::json!({
+                    "event": event,
+                    "scope": resolved.scope,
+                }),
+            ) {
+                log::warn!("emit hook_event_auto_resolved failed: {}", e);
+            }
+        } else {
+            pending().insert(event.id.clone(), tx);
+            // Attach resolution so the popup can show the scope label without re-running
+            // the engine in the frontend.
+            let mut enriched = event.clone();
+            enriched.resolved_kind = Some(resolved.kind);
+            enriched.resolved_scope = Some(resolved.scope);
+            queue().insert(event.id.clone(), enriched.clone());
+            if let Err(e) = app.emit("hook_event", enriched) {
+                log::warn!("emit hook_event failed: {}", e);
+            }
         }
 
         let prefs = crate::app_settings::get();
