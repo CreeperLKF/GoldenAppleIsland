@@ -1,5 +1,7 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import NotificationsSection from "./NotificationsSection";
+import PortSection from "./PortSection";
+import WindowsHookSection from "./WindowsHookSection";
 import WslInstancesSection from "./WslInstancesSection";
 import { useAppSettings } from "../hooks/useAppSettings";
 
@@ -72,7 +74,16 @@ export default function SettingsWindow() {
                 margin: "0 16px",
               }}
             />
+            <WindowsHookSection />
+            <div
+              style={{
+                borderTop: "0.5px solid var(--border)",
+                margin: "0 16px",
+              }}
+            />
             <WslInstancesSection />
+            <div style={{ borderTop: "0.5px solid var(--border)", margin: "0 16px" }} />
+            <PortSection settings={settings} onChange={update} />
           </>
         )}
       </div>
