@@ -29,6 +29,7 @@ dashmap = "6"
 log = "0.4"
 env_logger = "0.11"
 dirs = "5"
+regex = "1"
 
 [features]
 default = ["custom-protocol"]

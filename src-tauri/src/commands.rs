@@ -3,7 +3,7 @@ use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, Window};
 
 use crate::app_settings::{self, AppSettings};
 use crate::ws;
-use crate::wsl_admin::{self, BulkResult, WslDistroWithStatus};
+use crate::wsl_admin::{self, BulkResult, HookStatus, WslDistroWithStatus};
 
 #[tauri::command]
 pub async fn respond(id: String, action: String) {
@@ -99,6 +99,16 @@ pub async fn set_hook_enabled_all(enabled: bool) -> Vec<BulkResult> {
 }
 
 #[tauri::command]
+pub async fn list_wsl_distros_smart() -> Result<Vec<WslDistroWithStatus>, String> {
+    wsl_admin::list_distros_smart().await
+}
+
+#[tauri::command]
+pub async fn check_wsl_distro_status(distro: String) -> Result<HookStatus, String> {
+    wsl_admin::check_single_distro(&distro).await
+}
+
+#[tauri::command]
 pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window("settings") {
         let _ = existing.show();
@@ -119,4 +129,18 @@ pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
         .build()
         .map_err(|e| format!("failed to open settings window: {}", e))?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_windows_hook_status() -> crate::wsl_admin::HookStatus {
+    crate::windows_hook::get_status()
+}
+
+#[tauri::command]
+pub fn set_windows_hook_enabled(enabled: bool) -> Result<(), String> {
+    if enabled {
+        crate::windows_hook::enable()
+    } else {
+        crate::windows_hook::disable()
+    }
 }

@@ -1,9 +1,12 @@
 use std::process::Stdio;
 
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
+
+use crate::app_settings::{self, CachedHookStatus};
 
 const HOOK_COMMAND: &str = "~/.claude/hooks/pre-tool-use.sh";
 const PRE_TOOL_USE_SH: &str = include_str!("../../wsl/pre-tool-use.sh");
@@ -14,6 +17,7 @@ pub struct WslDistro {
     pub name: String,
     pub is_default: bool,
     pub version: u8,
+    pub state: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,8 +93,7 @@ pub async fn list_distros() -> Result<Vec<WslDistro>, String> {
         let Some(name) = parts.next() else {
             continue;
         };
-        // STATE column (e.g. "Running", "Stopped") — skip
-        let _state = parts.next();
+        let state = parts.next().unwrap_or("Stopped").to_string();
         let version: u8 = parts
             .next()
             .and_then(|v| v.parse().ok())
@@ -99,6 +102,7 @@ pub async fn list_distros() -> Result<Vec<WslDistro>, String> {
             name: name.to_string(),
             is_default,
             version,
+            state,
         });
     }
     Ok(distros)
@@ -374,4 +378,96 @@ pub async fn list_with_status() -> Result<Vec<WslDistroWithStatus>, String> {
         out.push(WslDistroWithStatus { distro: d, status });
     }
     Ok(out)
+}
+
+pub async fn read_script_port(distro: &str) -> Result<Option<u16>, String> {
+    let (code, stdout, _) = run_in_distro(
+        distro,
+        "cat ~/.claude/hooks/bridge.mjs 2>/dev/null || echo ''",
+    )
+    .await?;
+    if code != 0 || stdout.trim().is_empty() {
+        return Ok(None);
+    }
+    let re = Regex::new(r"(?m)^const WS_PORT\s*=\s*(\d+);").unwrap();
+    Ok(re
+        .captures(&stdout)
+        .and_then(|c| c.get(1))
+        .and_then(|m| m.as_str().parse::<u16>().ok()))
+}
+
+pub async fn update_script_port(distro: &str, new_port: u16) -> Result<(), String> {
+    let (code, stdout, _) = run_in_distro(distro, "cat ~/.claude/hooks/bridge.mjs 2>/dev/null")
+        .await?;
+    if code != 0 {
+        return Err(format!("{}: bridge.mjs not found", distro));
+    }
+    let re = Regex::new(r"(?m)^const WS_PORT\s*=\s*\d+;").unwrap();
+    let updated = re
+        .replace(&stdout, format!("const WS_PORT = {};", new_port).as_str())
+        .to_string();
+    write_file_in_distro(distro, "~/.claude/hooks/bridge.mjs", &updated).await
+}
+
+pub async fn list_distros_smart() -> Result<Vec<WslDistroWithStatus>, String> {
+    let distros = list_distros().await?;
+    let settings = app_settings::get();
+    let cache = &settings.wsl_status_cache;
+    let configured_port = settings.port;
+
+    let mut out = Vec::with_capacity(distros.len());
+    for d in distros {
+        let status = if d.state == "Running" {
+            let live = get_hook_status(&d.name).await.unwrap_or(HookStatus {
+                scripts_installed: false,
+                registered: false,
+            });
+            update_wsl_cache(&d.name, &live, configured_port);
+            live
+        } else {
+            match cache.get(&d.name) {
+                Some(cached) => HookStatus {
+                    scripts_installed: cached.scripts_installed,
+                    registered: cached.registered && cached.port == configured_port,
+                },
+                None => HookStatus {
+                    scripts_installed: false,
+                    registered: false,
+                },
+            }
+        };
+        out.push(WslDistroWithStatus { distro: d, status });
+    }
+    Ok(out)
+}
+
+pub async fn check_single_distro(distro_name: &str) -> Result<HookStatus, String> {
+    let settings = app_settings::get();
+    let configured_port = settings.port;
+
+    let live = get_hook_status(distro_name).await?;
+
+    if live.scripts_installed && live.registered {
+        if let Ok(Some(script_port)) = read_script_port(distro_name).await {
+            if script_port != configured_port {
+                update_script_port(distro_name, configured_port).await?;
+            }
+        }
+    }
+
+    update_wsl_cache(distro_name, &live, configured_port);
+    Ok(live)
+}
+
+fn update_wsl_cache(distro_name: &str, status: &HookStatus, port: u16) {
+    let mut settings = app_settings::get();
+    settings.wsl_status_cache.insert(
+        distro_name.to_string(),
+        CachedHookStatus {
+            scripts_installed: status.scripts_installed,
+            registered: status.registered,
+            port,
+        },
+    );
+    app_settings::set(settings);
 }

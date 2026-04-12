@@ -2,6 +2,7 @@ mod app_settings;
 mod commands;
 mod ws;
 mod wsl_admin;
+mod windows_hook;
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -28,6 +29,8 @@ pub fn run() {
             commands::get_app_settings,
             commands::update_app_settings,
             commands::list_wsl_distros,
+            commands::list_wsl_distros_smart,
+            commands::check_wsl_distro_status,
             commands::set_hook_enabled,
             commands::set_hook_enabled_all,
             commands::open_settings_window,
