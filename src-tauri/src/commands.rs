@@ -119,8 +119,7 @@ pub async fn check_wsl_distro_status(distro: String) -> Result<HookStatus, Strin
     wsl_admin::check_single_distro(&distro).await
 }
 
-#[tauri::command]
-pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
+pub fn build_settings_window(app: &AppHandle) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window("settings") {
         let _ = existing.show();
         let _ = existing.set_focus();
@@ -128,18 +127,27 @@ pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("index.html#/settings".into()))
-        .title("Golden Apple Island — Settings")
-        .inner_size(480.0, 640.0)
-        .min_inner_size(420.0, 480.0)
-        .resizable(true)
-        .skip_taskbar(false)
-        .always_on_top(false)
-        .decorations(true)
-        .visible(true)
-        .build()
-        .map_err(|e| format!("failed to open settings window: {}", e))?;
+    WebviewWindowBuilder::new(
+        app,
+        "settings",
+        WebviewUrl::App("index.html#/settings".into()),
+    )
+    .title("Golden Apple Island — Settings")
+    .inner_size(480.0, 640.0)
+    .min_inner_size(420.0, 480.0)
+    .resizable(true)
+    .skip_taskbar(false)
+    .always_on_top(false)
+    .decorations(true)
+    .visible(true)
+    .build()
+    .map_err(|e| format!("failed to open settings window: {}", e))?;
     Ok(())
+}
+
+#[tauri::command]
+pub async fn open_settings_window(app: AppHandle) -> Result<(), String> {
+    build_settings_window(&app)
 }
 
 #[tauri::command]

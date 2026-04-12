@@ -9,7 +9,7 @@ export interface HistoryEntry {
   answer?: string;
 }
 
-const MAX = 50;
+const MAX = 200;
 
 export function useHistory() {
   const [items, setItems] = useState<HistoryEntry[]>([]);

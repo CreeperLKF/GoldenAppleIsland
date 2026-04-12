@@ -82,7 +82,7 @@ pub fn run() {
                         }
                     }
                     "settings" => {
-                        if let Err(e) = commands::open_settings_window(app.clone()) {
+                        if let Err(e) = commands::build_settings_window(app) {
                             log::warn!("open_settings_window: {}", e);
                         }
                     }

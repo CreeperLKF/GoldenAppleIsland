@@ -39,8 +39,7 @@ export default function HistoryList({ items }: HistoryListProps) {
 
   if (items.length === 0) return null;
 
-  const limit = expanded ? 20 : 5;
-  const visible = items.slice(0, limit);
+  const visible = expanded ? items : items.slice(0, 5);
   const hasMore = items.length > 5;
 
   return (
@@ -55,7 +54,14 @@ export default function HistoryList({ items }: HistoryListProps) {
       >
         Recent
       </div>
-      <ul className="flex flex-col" style={{ gap: 0 }}>
+      <ul
+        className="flex flex-col"
+        style={
+          expanded
+            ? { gap: 0, maxHeight: 280, overflowY: "auto" }
+            : { gap: 0 }
+        }
+      >
         {visible.map((item) => {
           const { glyph, color } = statusGlyph(item);
           return (
