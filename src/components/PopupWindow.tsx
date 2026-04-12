@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
@@ -55,7 +55,19 @@ export default function PopupWindow() {
     onResolve,
   });
 
-  useWebSocket(enqueue);
+  const [showUpdateHint, setShowUpdateHint] = useState(false);
+
+  const onEvent = useCallback(
+    (event: HookEvent) => {
+      if (event.source_distro === "unknown" && !showUpdateHint) {
+        setShowUpdateHint(true);
+      }
+      enqueue(event);
+    },
+    [enqueue, showUpdateHint],
+  );
+
+  useWebSocket(onEvent);
 
   const { policies, setSession, removeSession } = useApprovalPolicies();
 
@@ -274,6 +286,28 @@ export default function PopupWindow() {
             )}
           </div>
 
+          {showUpdateHint && (
+            <div
+              className="flex items-center justify-between px-2"
+              style={{
+                height: 22,
+                fontSize: 11,
+                background: "var(--badge-permission-bg)",
+                color: "var(--badge-permission-text)",
+                borderTop: "0.5px solid var(--border)",
+              }}
+            >
+              <span>Update WSL scripts to enable per-distribution rules.</span>
+              <button
+                type="button"
+                onClick={() => setShowUpdateHint(false)}
+                aria-label="Dismiss hint"
+                style={{ fontSize: 11, marginLeft: 6 }}
+              >
+                ×
+              </button>
+            </div>
+          )}
           <PolicyPanel
             topEvent={top}
             topResolved={topResolved}
