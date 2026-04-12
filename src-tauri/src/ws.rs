@@ -44,12 +44,18 @@ fn emit_connection_count(app: &AppHandle, count: usize) {
     }
 }
 
+fn default_distro() -> String {
+    "unknown".to_string()
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct HookEvent {
     pub r#type: String,
     pub id: String,
     pub session_id: String,
     pub session_cwd: String,
+    #[serde(default = "default_distro")]
+    pub source_distro: String,
     pub hook_type: String,
     pub tool_name: String,
     pub tool_input: serde_json::Value,
