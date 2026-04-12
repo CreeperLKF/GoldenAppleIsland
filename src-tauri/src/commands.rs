@@ -58,6 +58,24 @@ pub fn update_app_settings(patch: Value) -> AppSettings {
     if let Some(b) = patch.get("sound_enabled").and_then(|v| v.as_bool()) {
         current.sound_enabled = b;
     }
+    if let Some(b) = patch.get("always_on_top").and_then(|v| v.as_bool()) {
+        current.always_on_top = b;
+    }
+    if let Some(b) = patch.get("collapsed").and_then(|v| v.as_bool()) {
+        current.collapsed = b;
+    }
+    if let Some(p) = patch.get("port").and_then(|v| v.as_u64()) {
+        let new_port = p as u16;
+        if new_port != current.port {
+            for cache in current.wsl_status_cache.values_mut() {
+                cache.registered = false;
+            }
+            if let Some(ref mut wc) = current.windows_hook_cache {
+                wc.registered = false;
+            }
+            current.port = new_port;
+        }
+    }
     app_settings::set(current)
 }
 

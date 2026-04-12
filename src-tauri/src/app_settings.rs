@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
@@ -5,11 +6,35 @@ use std::sync::{OnceLock, RwLock};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedHookStatus {
+    #[serde(default)]
+    pub scripts_installed: bool,
+    #[serde(default)]
+    pub registered: bool,
+    #[serde(default = "default_port")]
+    pub port: u16,
+}
+
+fn default_port() -> u16 {
+    19876
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     #[serde(default = "default_true")]
     pub toast_enabled: bool,
     #[serde(default = "default_true")]
     pub sound_enabled: bool,
+    #[serde(default = "default_true")]
+    pub always_on_top: bool,
+    #[serde(default)]
+    pub collapsed: bool,
+    #[serde(default = "default_port")]
+    pub port: u16,
+    #[serde(default)]
+    pub wsl_status_cache: HashMap<String, CachedHookStatus>,
+    #[serde(default)]
+    pub windows_hook_cache: Option<CachedHookStatus>,
 }
 
 fn default_true() -> bool {
@@ -21,6 +46,11 @@ impl Default for AppSettings {
         Self {
             toast_enabled: true,
             sound_enabled: true,
+            always_on_top: true,
+            collapsed: false,
+            port: 19876,
+            wsl_status_cache: HashMap::new(),
+            windows_hook_cache: None,
         }
     }
 }
