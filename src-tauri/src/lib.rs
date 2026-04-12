@@ -2,6 +2,7 @@ mod app_settings;
 mod commands;
 mod file_logger;
 mod path_norm;
+mod policy;
 mod session_ctx;
 mod ws;
 mod wsl_admin;
