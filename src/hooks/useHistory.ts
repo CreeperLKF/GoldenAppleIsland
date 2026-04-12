@@ -7,6 +7,7 @@ export interface HistoryEntry {
   action: "approve" | "deny" | "timeout";
   timestamp: string;
   answer?: string;
+  source?: "manual" | "auto";
 }
 
 const MAX = 200;

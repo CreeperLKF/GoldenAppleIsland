@@ -7,16 +7,17 @@ import SessionStrip from "./SessionStrip";
 import ApprovalCard from "./ApprovalCard";
 import QuestionCard from "./QuestionCard";
 import EmptyState from "./EmptyState";
-import QuickActions from "./QuickActions";
+import PolicyPanel from "./PolicyPanel";
 import HistoryList from "./HistoryList";
 import { usePendingEvents } from "../hooks/usePendingEvents";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useConnection } from "../hooks/useConnection";
 import { useHistory } from "../hooks/useHistory";
-import { useAutoApprove } from "../hooks/useAutoApprove";
+import { useApprovalPolicies } from "../hooks/useApprovalPolicies";
 import { useAppSettings } from "../hooks/useAppSettings";
-import type { HookEvent } from "../types/events";
+import type { HookEvent, PolicyKind, PolicyScope } from "../types/events";
 import { detectVariant } from "../types/events";
+import type { DropdownValue } from "./ui/PolicyDropdown";
 
 const APPROVE_ALL_STAGGER_MS = 50;
 
@@ -33,7 +34,6 @@ function summarize(event: HookEvent): string {
 
 export default function PopupWindow() {
   const { items: history, push: pushHistory } = useHistory();
-  const { enabled: autoApprove, toggle: toggleAutoApprove } = useAutoApprove();
   const { clientCount } = useConnection();
 
   const onResolve = useCallback(
@@ -54,32 +54,9 @@ export default function PopupWindow() {
     onResolve,
   });
 
-  const autoApproveRef = useRef(autoApprove);
-  useEffect(() => {
-    autoApproveRef.current = autoApprove;
-  }, [autoApprove]);
+  useWebSocket(enqueue);
 
-  const enqueueWithAuto = useCallback(
-    (event: HookEvent) => {
-      if (autoApproveRef.current) {
-        log.info(`auto-approve id=${event.id} tool=${event.tool_name}`);
-        window.setTimeout(() => resolve(event.id, "approve"), 0);
-        pushHistory({
-          id: event.id,
-          tool_name: event.tool_name,
-          summary: summarize(event),
-          action: "approve",
-          timestamp: new Date().toISOString(),
-        });
-        return;
-      }
-      log.info(`enqueue id=${event.id} tool=${event.tool_name}`);
-      enqueue(event);
-    },
-    [enqueue, resolve, pushHistory],
-  );
-
-  useWebSocket(enqueueWithAuto);
+  const { policies, setSession, removeSession } = useApprovalPolicies();
 
   const visible = useMemo(
     () => pending.filter((e) => !resolving.has(e.id)),
@@ -157,7 +134,44 @@ export default function PopupWindow() {
     return () => window.removeEventListener("keydown", onKey);
   }, [approveTop, denyTop, approveAll]);
 
-  const showQuickActions = connected || visible.length > 0 || autoApprove;
+  const top = visible[0] ?? null;
+
+  const topResolved = useMemo(() => {
+    if (!top) return null;
+    if (top.resolved_kind && top.resolved_scope) {
+      return { kind: top.resolved_kind, scope: top.resolved_scope };
+    }
+    // Fallback for events from before backend tagging landed (defensive).
+    return { kind: "manual" as PolicyKind, scope: "global" as PolicyScope };
+  }, [top]);
+
+  const sessionOverride: PolicyKind | null = useMemo(() => {
+    if (!top) return null;
+    const rule = policies.per_session.find(
+      (r) => r.session_id === top.session_id,
+    );
+    return rule ? rule.kind : null;
+  }, [top, policies]);
+
+  const onChangePolicy = useCallback(
+    async (next: DropdownValue) => {
+      if (!top) return;
+      if (next === "inherit") {
+        await removeSession(top.session_id).catch(log.error);
+        return;
+      }
+      await setSession(top.session_id, next).catch(log.error);
+      if (next === "auto") {
+        // Cascade: approve consecutive same-session events from the top.
+        const sid = top.session_id;
+        for (const e of pending) {
+          if (e.session_id !== sid) break;
+          resolve(e.id, "approve");
+        }
+      }
+    },
+    [top, pending, resolve, setSession, removeSession],
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -202,7 +216,7 @@ export default function PopupWindow() {
       />
       {!collapsed && (
         <>
-          {sharedCwd && <SessionStrip cwd={sharedCwd} autoApprove={autoApprove} />}
+          {sharedCwd && <SessionStrip cwd={sharedCwd} />}
 
           <div className="flex-1 overflow-y-auto">
             {visible.length === 0 ? (
@@ -239,14 +253,14 @@ export default function PopupWindow() {
             )}
           </div>
 
-          {showQuickActions && (
-            <QuickActions
-              pendingCount={visible.length}
-              autoApprove={autoApprove}
-              onToggleAutoApprove={toggleAutoApprove}
-              onApproveAll={approveAll}
-            />
-          )}
+          <PolicyPanel
+            topEvent={top}
+            topResolved={topResolved}
+            sessionOverride={sessionOverride}
+            pendingCount={visible.length}
+            onChangePolicy={onChangePolicy}
+            onApproveAll={approveAll}
+          />
           <HistoryList items={history} />
         </>
       )}
