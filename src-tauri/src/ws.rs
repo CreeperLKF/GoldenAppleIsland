@@ -15,7 +15,6 @@ use tokio::sync::{mpsc, Mutex};
 use tokio::time::timeout;
 use tokio_tungstenite::tungstenite::Message;
 
-const BIND_ADDR: &str = "127.0.0.1:9876";
 const RESPONSE_TIMEOUT_SECS: u64 = 300;
 
 static CLIENT_COUNT: AtomicUsize = AtomicUsize::new(0);
@@ -101,14 +100,17 @@ pub async fn send_response(id: String, action: String) {
 pub async fn serve(app: AppHandle) {
     emit_connection_count(&app, 0);
 
-    let listener = match TcpListener::bind(BIND_ADDR).await {
+    let port = crate::app_settings::get().port;
+    let bind_addr = format!("127.0.0.1:{}", port);
+
+    let listener = match TcpListener::bind(&bind_addr).await {
         Ok(l) => l,
         Err(e) => {
-            log::error!("failed to bind {}: {}", BIND_ADDR, e);
+            log::error!("failed to bind {}: {}", bind_addr, e);
             return;
         }
     };
-    log::info!("Claude Hook Guard WS listening on {}", BIND_ADDR);
+    log::info!("Claude Hook Guard WS listening on {}", bind_addr);
 
     loop {
         match listener.accept().await {
