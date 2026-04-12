@@ -9,6 +9,11 @@ interface Props {
   size?: "sm" | "md";
   ariaLabel?: string;
   disabled?: boolean;
+  labels?: {
+    auto?: string;
+    manual?: string;
+    inherit?: string;
+  };
 }
 
 export default function PolicyDropdown({
@@ -18,9 +23,13 @@ export default function PolicyDropdown({
   size = "md",
   ariaLabel,
   disabled = false,
+  labels,
 }: Props) {
   const height = size === "sm" ? 20 : 24;
   const fontSize = size === "sm" ? 11 : 12;
+  const autoLabel = labels?.auto ?? "Force Auto";
+  const manualLabel = labels?.manual ?? "Force Manual";
+  const inheritLabel = labels?.inherit ?? "Use inherited";
   return (
     <select
       aria-label={ariaLabel}
@@ -37,9 +46,9 @@ export default function PolicyDropdown({
         borderColor: "var(--border)",
       }}
     >
-      {allowInherit && <option value="inherit">Use inherited</option>}
-      <option value="auto">Force Auto</option>
-      <option value="manual">Force Manual</option>
+      {allowInherit && <option value="inherit">{inheritLabel}</option>}
+      <option value="auto">{autoLabel}</option>
+      <option value="manual">{manualLabel}</option>
     </select>
   );
 }

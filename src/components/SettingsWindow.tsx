@@ -1,5 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import log from "../lib/log";
+import ApprovalPoliciesSection from "./ApprovalPoliciesSection";
 import LoggingSection from "./LoggingSection";
 import NotificationsSection from "./NotificationsSection";
 import PortSection from "./PortSection";
@@ -70,12 +71,9 @@ export default function SettingsWindow() {
         {settings && (
           <>
             <NotificationsSection settings={settings} onChange={update} />
-            <div
-              style={{
-                borderTop: "0.5px solid var(--border)",
-                margin: "0 16px",
-              }}
-            />
+            <div style={{ borderTop: "0.5px solid var(--border)", margin: "0 16px" }} />
+            <ApprovalPoliciesSection />
+            <div style={{ borderTop: "0.5px solid var(--border)", margin: "0 16px" }} />
             <WindowsHookSection />
             <div
               style={{
