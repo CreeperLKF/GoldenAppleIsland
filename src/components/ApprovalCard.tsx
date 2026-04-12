@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { HookEvent } from "../types/events";
-import { categorize, badgeClass } from "../types/events";
+import { categorize, badgeClass, detectVariant } from "../types/events";
 import ActionButtons from "./ActionButtons";
 
 interface ApprovalCardProps {
@@ -8,6 +8,7 @@ interface ApprovalCardProps {
   resolving: boolean;
   onApprove: () => void;
   onDeny: () => void;
+  onApproveSession?: () => void;
 }
 
 function formatAgo(iso: string, now: number): string {
@@ -46,14 +47,21 @@ function describe(event: HookEvent): { primary: string; description: string } {
   return { primary: event.tool_name, description: `Run ${event.tool_name}` };
 }
 
-export default function ApprovalCard({ event, resolving, onApprove, onDeny }: ApprovalCardProps) {
+export default function ApprovalCard({
+  event,
+  resolving,
+  onApprove,
+  onDeny,
+  onApproveSession,
+}: ApprovalCardProps) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
-  const category = categorize(event.tool_name);
+  const variant = detectVariant(event);
+  const category = categorize(event.tool_name, variant);
   const { primary, description } = describe(event);
 
   return (
@@ -106,6 +114,8 @@ export default function ApprovalCard({ event, resolving, onApprove, onDeny }: Ap
         onDeny={onDeny}
         approveLabel={`Approve ${category.toLowerCase()}: ${primary}`}
         denyLabel={`Deny ${category.toLowerCase()}: ${primary}`}
+        variant={variant === "permission" ? "permission" : "approval"}
+        onApproveSession={onApproveSession}
       />
     </article>
   );
