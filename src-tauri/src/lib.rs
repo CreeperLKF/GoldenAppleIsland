@@ -1,6 +1,7 @@
 mod app_settings;
 mod commands;
 mod file_logger;
+mod path_norm;
 mod ws;
 mod wsl_admin;
 mod windows_hook;
