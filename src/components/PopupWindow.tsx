@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import Header from "./Header";
 import SessionStrip from "./SessionStrip";
 import ApprovalCard from "./ApprovalCard";
@@ -133,12 +134,34 @@ export default function PopupWindow() {
 
   const showQuickActions = connected || visible.length > 0;
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const height = Math.min(600, Math.max(80, Math.ceil(entry.borderBoxSize[0].blockSize)));
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        getCurrentWindow().setSize(new LogicalSize(400, height)).catch(() => {});
+      }, 50);
+    });
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
   return (
     <div
+      ref={containerRef}
       className="flex flex-col bg-[var(--bg-base)] overflow-hidden"
       style={{
         width: 400,
-        maxHeight: 600,
         borderRadius: 8,
         border: "0.5px solid var(--border)",
         boxShadow: "0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.12)",
