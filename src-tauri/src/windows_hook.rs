@@ -8,7 +8,9 @@ use crate::app_settings::{self, CachedHookStatus};
 use crate::wsl_admin::HookStatus;
 
 const WIN_HOOK_COMMAND: &str = "~/.claude/hooks/pre-tool-use.cmd";
+const WIN_PERM_HOOK_COMMAND: &str = "~/.claude/hooks/permission-request.cmd";
 const PRE_TOOL_USE_CMD: &str = include_str!("../../wsl/pre-tool-use.cmd");
+const PERMISSION_REQUEST_CMD: &str = include_str!("../../wsl/permission-request.cmd");
 const BRIDGE_MJS: &str = include_str!("../../wsl/bridge.mjs");
 
 fn hooks_dir() -> Option<PathBuf> {
@@ -26,7 +28,9 @@ pub fn get_status() -> HookStatus {
             registered: false,
         };
     };
-    let scripts_installed = dir.join("pre-tool-use.cmd").exists() && dir.join("bridge.mjs").exists();
+    let scripts_installed = dir.join("pre-tool-use.cmd").exists()
+        && dir.join("permission-request.cmd").exists()
+        && dir.join("bridge.mjs").exists();
 
     let registered = match settings_path().and_then(|p| fs::read_to_string(p).ok()) {
         Some(s) => match serde_json::from_str::<Value>(&s) {
@@ -48,6 +52,8 @@ pub fn enable() -> Result<(), String> {
 
     fs::write(dir.join("pre-tool-use.cmd"), PRE_TOOL_USE_CMD)
         .map_err(|e| format!("write pre-tool-use.cmd: {}", e))?;
+    fs::write(dir.join("permission-request.cmd"), PERMISSION_REQUEST_CMD)
+        .map_err(|e| format!("write permission-request.cmd: {}", e))?;
     fs::write(dir.join("bridge.mjs"), BRIDGE_MJS)
         .map_err(|e| format!("write bridge.mjs: {}", e))?;
 
@@ -128,9 +134,14 @@ fn update_cache(status: &HookStatus) {
 }
 
 fn has_hook_entry(settings: &Value) -> bool {
+    has_hook_for_event(settings, "PreToolUse", WIN_HOOK_COMMAND)
+        && has_hook_for_event(settings, "PermissionRequest", WIN_PERM_HOOK_COMMAND)
+}
+
+fn has_hook_for_event(settings: &Value, event_name: &str, command: &str) -> bool {
     let Some(groups) = settings
         .get("hooks")
-        .and_then(|h| h.get("PreToolUse"))
+        .and_then(|h| h.get(event_name))
         .and_then(|v| v.as_array())
     else {
         return false;
@@ -140,7 +151,7 @@ fn has_hook_entry(settings: &Value) -> bool {
             continue;
         };
         for hook in hooks {
-            if hook.get("command").and_then(|c| c.as_str()) == Some(WIN_HOOK_COMMAND) {
+            if hook.get("command").and_then(|c| c.as_str()) == Some(command) {
                 return true;
             }
         }
@@ -149,6 +160,11 @@ fn has_hook_entry(settings: &Value) -> bool {
 }
 
 fn add_hook_entry(settings: &mut Value) {
+    add_hook_for_event(settings, "PreToolUse", WIN_HOOK_COMMAND, None);
+    add_hook_for_event(settings, "PermissionRequest", WIN_PERM_HOOK_COMMAND, Some(86400));
+}
+
+fn add_hook_for_event(settings: &mut Value, event_name: &str, command: &str, timeout: Option<u64>) {
     if !settings.is_object() {
         *settings = json!({});
     }
@@ -158,36 +174,44 @@ fn add_hook_entry(settings: &mut Value) {
         *hooks_entry = json!({});
     }
     let hooks = hooks_entry.as_object_mut().unwrap();
-    let pre_entry = hooks
-        .entry("PreToolUse")
+    let entry = hooks
+        .entry(event_name)
         .or_insert_with(|| Value::Array(vec![]));
-    if !pre_entry.is_array() {
-        *pre_entry = Value::Array(vec![]);
+    if !entry.is_array() {
+        *entry = Value::Array(vec![]);
     }
-    let arr = pre_entry.as_array_mut().unwrap();
+    let arr = entry.as_array_mut().unwrap();
 
     for group in arr.iter() {
         if let Some(inner) = group.get("hooks").and_then(|v| v.as_array()) {
             for hook in inner {
-                if hook.get("command").and_then(|c| c.as_str()) == Some(WIN_HOOK_COMMAND) {
+                if hook.get("command").and_then(|c| c.as_str()) == Some(command) {
                     return;
                 }
             }
         }
     }
 
+    let mut hook_obj = json!({ "type": "command", "command": command });
+    if let Some(t) = timeout {
+        hook_obj.as_object_mut().unwrap().insert("timeout".to_string(), json!(t));
+    }
+
     arr.push(json!({
         "matcher": "*",
-        "hooks": [
-            { "type": "command", "command": WIN_HOOK_COMMAND }
-        ]
+        "hooks": [hook_obj]
     }));
 }
 
 fn remove_hook_entry(settings: &mut Value) {
+    remove_hook_for_event(settings, "PreToolUse", WIN_HOOK_COMMAND);
+    remove_hook_for_event(settings, "PermissionRequest", WIN_PERM_HOOK_COMMAND);
+}
+
+fn remove_hook_for_event(settings: &mut Value, event_name: &str, command: &str) {
     let Some(arr) = settings
         .get_mut("hooks")
-        .and_then(|h| h.get_mut("PreToolUse"))
+        .and_then(|h| h.get_mut(event_name))
         .and_then(|v| v.as_array_mut())
     else {
         return;
@@ -196,7 +220,7 @@ fn remove_hook_entry(settings: &mut Value) {
     for group in arr.iter_mut() {
         if let Some(inner) = group.get_mut("hooks").and_then(|v| v.as_array_mut()) {
             inner.retain(|hook| {
-                hook.get("command").and_then(|c| c.as_str()) != Some(WIN_HOOK_COMMAND)
+                hook.get("command").and_then(|c| c.as_str()) != Some(command)
             });
         }
     }

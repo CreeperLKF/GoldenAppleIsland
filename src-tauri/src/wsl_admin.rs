@@ -9,7 +9,9 @@ use tokio::process::Command;
 use crate::app_settings::{self, CachedHookStatus};
 
 const HOOK_COMMAND: &str = "~/.claude/hooks/pre-tool-use.sh";
+const PERM_HOOK_COMMAND: &str = "~/.claude/hooks/permission-request.sh";
 const PRE_TOOL_USE_SH: &str = include_str!("../../wsl/pre-tool-use.sh");
+const PERMISSION_REQUEST_SH: &str = include_str!("../../wsl/permission-request.sh");
 const BRIDGE_MJS: &str = include_str!("../../wsl/bridge.mjs");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -169,7 +171,7 @@ async fn write_file_in_distro(
 
 pub async fn get_hook_status(distro: &str) -> Result<HookStatus, String> {
     let (test_code, _, _) =
-        run_in_distro(distro, "test -f ~/.claude/hooks/pre-tool-use.sh").await?;
+        run_in_distro(distro, "test -f ~/.claude/hooks/pre-tool-use.sh && test -f ~/.claude/hooks/permission-request.sh").await?;
     let scripts_installed = test_code == 0;
 
     let (_, stdout, _) = run_in_distro(
@@ -190,9 +192,14 @@ pub async fn get_hook_status(distro: &str) -> Result<HookStatus, String> {
 }
 
 fn has_hook_entry(settings: &Value) -> bool {
+    has_hook_for_event(settings, "PreToolUse", HOOK_COMMAND)
+        && has_hook_for_event(settings, "PermissionRequest", PERM_HOOK_COMMAND)
+}
+
+fn has_hook_for_event(settings: &Value, event_name: &str, command: &str) -> bool {
     let Some(groups) = settings
         .get("hooks")
-        .and_then(|h| h.get("PreToolUse"))
+        .and_then(|h| h.get(event_name))
         .and_then(|v| v.as_array())
     else {
         return false;
@@ -202,7 +209,7 @@ fn has_hook_entry(settings: &Value) -> bool {
             continue;
         };
         for hook in hooks {
-            if hook.get("command").and_then(|c| c.as_str()) == Some(HOOK_COMMAND) {
+            if hook.get("command").and_then(|c| c.as_str()) == Some(command) {
                 return true;
             }
         }
@@ -211,6 +218,11 @@ fn has_hook_entry(settings: &Value) -> bool {
 }
 
 fn add_hook_entry(settings: &mut Value) {
+    add_hook_for_event(settings, "PreToolUse", HOOK_COMMAND, None);
+    add_hook_for_event(settings, "PermissionRequest", PERM_HOOK_COMMAND, Some(86400));
+}
+
+fn add_hook_for_event(settings: &mut Value, event_name: &str, command: &str, timeout: Option<u64>) {
     if !settings.is_object() {
         *settings = json!({});
     }
@@ -220,37 +232,45 @@ fn add_hook_entry(settings: &mut Value) {
         *hooks_entry = json!({});
     }
     let hooks = hooks_entry.as_object_mut().unwrap();
-    let pre_entry = hooks
-        .entry("PreToolUse")
+    let entry = hooks
+        .entry(event_name)
         .or_insert_with(|| Value::Array(vec![]));
-    if !pre_entry.is_array() {
-        *pre_entry = Value::Array(vec![]);
+    if !entry.is_array() {
+        *entry = Value::Array(vec![]);
     }
-    let arr = pre_entry.as_array_mut().unwrap();
+    let arr = entry.as_array_mut().unwrap();
 
     // If our entry already exists, nothing to do.
     for group in arr.iter() {
         if let Some(inner) = group.get("hooks").and_then(|v| v.as_array()) {
             for hook in inner {
-                if hook.get("command").and_then(|c| c.as_str()) == Some(HOOK_COMMAND) {
+                if hook.get("command").and_then(|c| c.as_str()) == Some(command) {
                     return;
                 }
             }
         }
     }
 
+    let mut hook_obj = json!({ "type": "command", "command": command });
+    if let Some(t) = timeout {
+        hook_obj.as_object_mut().unwrap().insert("timeout".to_string(), json!(t));
+    }
+
     arr.push(json!({
         "matcher": "*",
-        "hooks": [
-            { "type": "command", "command": HOOK_COMMAND }
-        ]
+        "hooks": [hook_obj]
     }));
 }
 
 fn remove_hook_entry(settings: &mut Value) {
+    remove_hook_for_event(settings, "PreToolUse", HOOK_COMMAND);
+    remove_hook_for_event(settings, "PermissionRequest", PERM_HOOK_COMMAND);
+}
+
+fn remove_hook_for_event(settings: &mut Value, event_name: &str, command: &str) {
     let Some(arr) = settings
         .get_mut("hooks")
-        .and_then(|h| h.get_mut("PreToolUse"))
+        .and_then(|h| h.get_mut(event_name))
         .and_then(|v| v.as_array_mut())
     else {
         return;
@@ -259,7 +279,7 @@ fn remove_hook_entry(settings: &mut Value) {
     for group in arr.iter_mut() {
         if let Some(inner) = group.get_mut("hooks").and_then(|v| v.as_array_mut()) {
             inner.retain(|hook| {
-                hook.get("command").and_then(|c| c.as_str()) != Some(HOOK_COMMAND)
+                hook.get("command").and_then(|c| c.as_str()) != Some(command)
             });
         }
     }
@@ -307,9 +327,10 @@ async fn write_settings(distro: &str, settings: &Value) -> Result<(), String> {
 
 async fn ensure_scripts(distro: &str) -> Result<(), String> {
     write_file_in_distro(distro, "~/.claude/hooks/pre-tool-use.sh", PRE_TOOL_USE_SH).await?;
+    write_file_in_distro(distro, "~/.claude/hooks/permission-request.sh", PERMISSION_REQUEST_SH).await?;
     write_file_in_distro(distro, "~/.claude/hooks/bridge.mjs", BRIDGE_MJS).await?;
     let (code, _, stderr) =
-        run_in_distro(distro, "chmod +x ~/.claude/hooks/pre-tool-use.sh").await?;
+        run_in_distro(distro, "chmod +x ~/.claude/hooks/pre-tool-use.sh ~/.claude/hooks/permission-request.sh").await?;
     if code != 0 {
         return Err(format!("chmod failed in {}: {}", distro, stderr));
     }
