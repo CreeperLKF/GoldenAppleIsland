@@ -76,6 +76,21 @@ export default function HistoryList({ items }: HistoryListProps) {
               >
                 {glyph}
               </span>
+              {item.source === "auto" && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    padding: "0 4px",
+                    marginRight: 6,
+                    borderRadius: 3,
+                    background: "var(--bg-elevated)",
+                    color: "var(--text-tertiary)",
+                    border: "0.5px solid var(--border)",
+                  }}
+                >
+                  auto
+                </span>
+              )}
               <span
                 className="text-[var(--text-secondary)] flex-1 truncate"
                 style={{ marginRight: 8 }}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import log from "../lib/log";
 import Header from "./Header";
@@ -194,6 +195,26 @@ export default function PopupWindow() {
       if (timer) clearTimeout(timer);
     };
   }, []);
+
+  useEffect(() => {
+    const unlisten = listen<{ event: HookEvent; scope: string }>(
+      "hook_event_auto_resolved",
+      (e) => {
+        const ev = e.payload.event;
+        pushHistory({
+          id: ev.id,
+          tool_name: ev.tool_name,
+          summary: summarize(ev),
+          action: "approve",
+          timestamp: new Date().toISOString(),
+          source: "auto",
+        });
+      },
+    );
+    return () => {
+      unlisten.then((u) => u()).catch(() => {});
+    };
+  }, [pushHistory]);
 
   return (
     <div
