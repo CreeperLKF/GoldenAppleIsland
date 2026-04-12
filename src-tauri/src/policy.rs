@@ -156,6 +156,8 @@ mod tests {
             tool_name: "Bash".into(),
             tool_input: serde_json::json!({}),
             timestamp: "2026-04-13T00:00:00Z".into(),
+            resolved_kind: None,
+            resolved_scope: None,
         }
     }
 
