@@ -2,7 +2,8 @@
 import { randomUUID, createHash } from 'node:crypto';
 import process from 'node:process';
 
-const WS_URL = 'ws://localhost:9876';
+const WS_PORT = 19876;
+const WS_URL = `ws://localhost:${WS_PORT}`;
 const TIMEOUT_MS = Number.parseInt(process.env.CLAUDE_HOOK_GUARD_TIMEOUT_MS ?? '', 10) || 300000;
 
 function emitDeny(reason) {
