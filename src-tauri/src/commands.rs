@@ -31,11 +31,13 @@ pub fn set_pending_count(count: u32, app: AppHandle) {
 pub fn show_popup(window: Window) {
     let _ = window.show();
     let _ = window.set_focus();
+    crate::sync_show_check(true);
 }
 
 #[tauri::command]
 pub fn hide_popup(window: Window) {
     let _ = window.hide();
+    crate::sync_show_check(false);
 }
 
 fn update_tray_badge(app: &AppHandle, tooltip: &str, _count: u32) {

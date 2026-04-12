@@ -4,11 +4,15 @@ mod ws;
 mod wsl_admin;
 mod windows_hook;
 
+use std::sync::OnceLock;
+
 use tauri::{
-    menu::{Menu, MenuItem},
+    menu::{CheckMenuItem, Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Manager, PhysicalPosition,
+    Manager, PhysicalPosition, Wry,
 };
+
+static SHOW_CHECK: OnceLock<CheckMenuItem<Wry>> = OnceLock::new();
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -38,7 +42,8 @@ pub fn run() {
             commands::set_windows_hook_enabled,
         ])
         .setup(|app| {
-            let show_item = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
+            let show_item = CheckMenuItem::with_id(app, "show", "Show", true, false, None::<&str>)?;
+            let _ = SHOW_CHECK.set(show_item.clone());
             let settings_item =
                 MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -52,8 +57,17 @@ pub fn run() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => {
                         if let Some(win) = app.get_webview_window("main") {
-                            let _ = win.show();
-                            let _ = win.set_focus();
+                            // CheckMenuItem auto-toggles before this callback fires.
+                            let checked = SHOW_CHECK
+                                .get()
+                                .and_then(|c| c.is_checked().ok())
+                                .unwrap_or(false);
+                            if checked {
+                                let _ = win.show();
+                                let _ = win.set_focus();
+                            } else {
+                                let _ = win.hide();
+                            }
                         }
                     }
                     "settings" => {
@@ -77,13 +91,15 @@ pub fn run() {
                         let cursor = app.cursor_position().ok();
                         if let Some(win) = app.get_webview_window("main") {
                             let visible = win.is_visible().unwrap_or(false);
-                            if visible {
-                                let _ = win.hide();
-                            } else {
+                            let next_visible = !visible;
+                            if next_visible {
                                 position_window_at_cursor(&win, cursor);
                                 let _ = win.show();
                                 let _ = win.set_focus();
+                            } else {
+                                let _ = win.hide();
                             }
+                            sync_show_check(next_visible);
                         }
                     }
                 })
@@ -106,6 +122,12 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+pub fn sync_show_check(checked: bool) {
+    if let Some(item) = SHOW_CHECK.get() {
+        let _ = item.set_checked(checked);
+    }
 }
 
 fn position_window_at_cursor(
