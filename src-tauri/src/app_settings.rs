@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
 
 use serde::{Deserialize, Serialize};
+use crate::policy::ApprovalPolicies;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedHookStatus {
@@ -37,6 +38,8 @@ pub struct AppSettings {
     pub wsl_status_cache: HashMap<String, CachedHookStatus>,
     #[serde(default)]
     pub windows_hook_cache: Option<CachedHookStatus>,
+    #[serde(default)]
+    pub approval_policies: ApprovalPolicies,
 }
 
 fn default_true() -> bool {
@@ -54,6 +57,7 @@ impl Default for AppSettings {
             log_to_file: false,
             wsl_status_cache: HashMap::new(),
             windows_hook_cache: None,
+            approval_policies: ApprovalPolicies::default(),
         }
     }
 }
