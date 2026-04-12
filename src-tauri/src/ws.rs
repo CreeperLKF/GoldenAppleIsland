@@ -248,7 +248,7 @@ async fn handle_connection(
         }
 
         let prefs = crate::app_settings::get();
-        if prefs.toast_enabled {
+        if prefs.toast_enabled && resolved.kind != PolicyKind::Auto {
             let body = format_notification_body(&event);
             let mut builder = app
                 .notification()
