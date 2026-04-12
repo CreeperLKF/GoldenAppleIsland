@@ -1,14 +1,55 @@
 export type HookType = "pre_tool_use" | "permission_request";
 
+export type PolicyKind = "manual" | "auto";
+export type PolicyScope = "global" | "distro" | "folder" | "session";
+
 export interface HookEvent {
   type: "hook_event";
   id: string;
   session_id: string;
   session_cwd: string;
+  source_distro: string;
   hook_type: HookType;
   tool_name: string;
   tool_input: Record<string, unknown>;
   timestamp: string;
+  /** Set by the backend before emit; absent for events read from raw WS. */
+  resolved_kind?: PolicyKind;
+  resolved_scope?: PolicyScope;
+}
+
+export interface PolicyRule {
+  kind: PolicyKind;
+  include_subdirectories: boolean;
+  created_at: string;
+}
+
+export interface SessionRule {
+  session_id: string;
+  session_cwd: string;
+  distro: string;
+  kind: PolicyKind;
+  created_at: string;
+}
+
+export interface ApprovalPolicies {
+  global: PolicyKind;
+  per_distro: Record<string, PolicyRule>;
+  per_folder: Record<string, PolicyRule>;
+  per_session: SessionRule[];
+}
+
+export interface RecentSession {
+  session_id: string;
+  start_cwd_normalized: string;
+  distro: string;
+  last_seen_at_ms: number;
+  rule_kind: PolicyKind | null;
+}
+
+export interface AutoResolvedEvent {
+  event: HookEvent;
+  scope: PolicyScope;
 }
 
 export interface HookResponse {
