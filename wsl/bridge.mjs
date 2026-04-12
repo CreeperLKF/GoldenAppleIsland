@@ -93,11 +93,14 @@ async function main() {
 
   const id = 'evt_' + randomUUID().replaceAll('-', '').slice(0, 12);
 
+  const distro = process.env.WSL_DISTRO_NAME || 'windows';
+
   const event = {
     type: 'hook_event',
     id,
     session_id: sessionId,
     session_cwd: cwd,
+    source_distro: distro,
     hook_type: HOOK_TYPE,
     tool_name: toolName,
     tool_input: toolInput,
