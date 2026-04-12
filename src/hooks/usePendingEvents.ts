@@ -8,7 +8,7 @@ const FADE_MS = 200;
 export type ResolveAction = "approve" | "deny";
 
 export interface UsePendingEventsOptions {
-  onResolve?: (event: HookEvent, action: ResolveAction) => void;
+  onResolve?: (event: HookEvent, action: ResolveAction, answer?: string) => void;
 }
 
 export function usePendingEvents(options: UsePendingEventsOptions = {}) {
@@ -35,11 +35,18 @@ export function usePendingEvents(options: UsePendingEventsOptions = {}) {
   }, []);
 
   const resolve = useCallback(
-    (id: string, action: ResolveAction) => {
+    (id: string, action: ResolveAction, answer?: string, sessionMode?: string) => {
       const event = pendingRef.current.find((e) => e.id === id);
-      log.info(`resolve id=${id} action=${action}`);
-      invoke("respond", { id, action }).catch(log.error);
-      if (event && onResolve) onResolve(event, action);
+      log.info(
+        `resolve id=${id} action=${action}${answer ? " with answer" : ""}${sessionMode ? ` mode=${sessionMode}` : ""}`,
+      );
+      invoke("respond", {
+        id,
+        action,
+        answer: answer ?? null,
+        sessionMode: sessionMode ?? null,
+      }).catch(log.error);
+      if (event && onResolve) onResolve(event, action, answer);
       setResolving((prev) => {
         const next = new Set(prev);
         next.add(id);
