@@ -56,12 +56,17 @@ export default function PopupWindow() {
   });
 
   const [showUpdateHint, setShowUpdateHint] = useState(false);
+  // Tracks the most recently seen event so the policy dropdown remains
+  // actionable after the queue drains — the user can pre-set Force Auto
+  // before the next event for the same session arrives.
+  const [lastSeenEvent, setLastSeenEvent] = useState<HookEvent | null>(null);
 
   const onEvent = useCallback(
     (event: HookEvent) => {
       if (event.source_distro === "unknown" && !showUpdateHint) {
         setShowUpdateHint(true);
       }
+      setLastSeenEvent(event);
       enqueue(event);
     },
     [enqueue, showUpdateHint],
@@ -148,6 +153,10 @@ export default function PopupWindow() {
   }, [approveTop, denyTop, approveAll]);
 
   const top = visible[0] ?? null;
+  // The dropdown operates on the current top event if any, otherwise on the
+  // last session we saw. That keeps the control usable while the queue is
+  // empty between events of the same Claude run.
+  const activeEvent = top ?? lastSeenEvent;
 
   const topResolved = useMemo(() => {
     if (!top) return null;
@@ -159,31 +168,33 @@ export default function PopupWindow() {
   }, [top]);
 
   const sessionOverride: PolicyKind | null = useMemo(() => {
-    if (!top) return null;
+    if (!activeEvent) return null;
     const rule = policies.per_session.find(
-      (r) => r.session_id === top.session_id,
+      (r) => r.session_id === activeEvent.session_id,
     );
     return rule ? rule.kind : null;
-  }, [top, policies]);
+  }, [activeEvent, policies]);
 
   const onChangePolicy = useCallback(
     async (next: DropdownValue) => {
-      if (!top) return;
+      if (!activeEvent) return;
       if (next === "inherit") {
-        await removeSession(top.session_id).catch(log.error);
+        await removeSession(activeEvent.session_id).catch(log.error);
         return;
       }
-      await setSession(top.session_id, next).catch(log.error);
+      await setSession(activeEvent.session_id, next).catch(log.error);
       if (next === "auto") {
-        // Cascade: approve consecutive same-session events from the top.
-        const sid = top.session_id;
+        // Cascade: approve consecutive same-session events from the top of
+        // the current pending queue. If the queue is empty this is a no-op,
+        // and the rule still applies to future events from this session.
+        const sid = activeEvent.session_id;
         for (const e of pending) {
           if (e.session_id !== sid) break;
           resolve(e.id, "approve");
         }
       }
     },
-    [top, pending, resolve, setSession, removeSession],
+    [activeEvent, pending, resolve, setSession, removeSession],
   );
 
   const containerRef = useRef<HTMLDivElement>(null);

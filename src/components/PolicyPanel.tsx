@@ -40,54 +40,60 @@ export default function PolicyPanel({
   onChangePolicy,
   onApproveAll,
 }: Props) {
-  if (!topEvent) return null;
-
-  const sessShort = truncateMiddle(topEvent.session_id, 14);
-  const pathShort = truncateMiddle(
-    topEvent.session_cwd || "—",
-    42,
-  );
+  // Info bar is intentionally hidden for now — the code below is kept so we
+  // can re-enable it (or swap it for a different presentation) without
+  // reconstructing the session/path/effective-label layout from scratch.
+  // Flip SHOW_INFO_BAR to true to bring it back.
+  const SHOW_INFO_BAR = false;
+  const sessShort = topEvent ? truncateMiddle(topEvent.session_id, 14) : "";
+  const pathShort = topEvent
+    ? truncateMiddle(topEvent.session_cwd || "—", 42)
+    : "";
 
   return (
     <div
       className="flex flex-col bg-[var(--bg-surface)]"
       style={{ borderTop: "0.5px solid var(--border)" }}
     >
-      {/* Info bar */}
-      <div
-        className="flex items-center px-2"
-        style={{
-          height: 20,
-          fontSize: 11,
-          color: "var(--text-tertiary)",
-          gap: 8,
-        }}
-      >
-        <span
-          title={topEvent.session_id}
-          style={{ flexShrink: 0, fontFamily: "var(--font-mono, monospace)" }}
+      {/* Info bar — preserved intentionally; gated by SHOW_INFO_BAR = false. */}
+      {SHOW_INFO_BAR && topEvent && (
+        <div
+          className="flex items-center px-2"
+          style={{
+            height: 20,
+            fontSize: 11,
+            color: "var(--text-tertiary)",
+            gap: 8,
+          }}
         >
-          {sessShort}
-        </span>
-        <span
-          title={topEvent.session_cwd}
-          className="flex-1 truncate"
-          style={{ fontFamily: "var(--font-mono, monospace)" }}
-        >
-          {pathShort}
-        </span>
-        <span style={{ flexShrink: 0, color: "var(--text-secondary)" }}>
-          {effectiveLabel(topResolved)}
-        </span>
-      </div>
+          <span
+            title={topEvent.session_id}
+            style={{
+              flexShrink: 0,
+              fontFamily: "var(--font-mono, monospace)",
+            }}
+          >
+            {sessShort}
+          </span>
+          <span
+            title={topEvent.session_cwd}
+            className="flex-1 truncate"
+            style={{ fontFamily: "var(--font-mono, monospace)" }}
+          >
+            {pathShort}
+          </span>
+          <span style={{ flexShrink: 0, color: "var(--text-secondary)" }}>
+            {effectiveLabel(topResolved)}
+          </span>
+        </div>
+      )}
 
-      {/* Action bar */}
+      {/* Action bar — always visible so the dropdown is reachable */}
       <div
         className="flex items-center px-2"
         style={{
-          height: 32,
+          height: 36,
           gap: 8,
-          borderTop: "0.5px solid var(--border)",
         }}
       >
         <div style={{ flex: "1.4 1 0" }}>
