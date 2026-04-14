@@ -10,7 +10,7 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "check": "tsc -b --noEmit && cargo check --manifest-path src-tauri/Cargo.toml",
+    "check": "tsc --noEmit && cargo check --manifest-path src-tauri/Cargo.toml",
     "bundle:wsl": "node scripts/bundle-wsl.mjs",
     "release": "node scripts/bump-version.mjs",
     "clean": "node scripts/clean.mjs"
