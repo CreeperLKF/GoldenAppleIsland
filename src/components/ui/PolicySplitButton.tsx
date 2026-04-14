@@ -102,13 +102,13 @@ export default function PolicySplitButton({
           role="menu"
           style={{
             position: "absolute",
-            top: 26,
+            bottom: 26,
             right: 0,
             minWidth: 160,
             background: "var(--bg-surface)",
             border: "0.5px solid var(--border)",
             borderRadius: 4,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
+            boxShadow: "0 -4px 12px rgba(0,0,0,0.18)",
             zIndex: 10,
             padding: 2,
           }}
