@@ -32,8 +32,7 @@
   "bundle": {
     "active": true,
     "targets": [
-      "msi",
-      "nsis"
+      "msi"
     ],
     "publisher": "Golden Apple Island",
     "category": "DeveloperTool",
@@ -52,18 +51,8 @@
     "windows": {
       "wix": {
         "language": [
-          "en-US",
-          "zh-CN"
+          "en-US"
         ]
-      },
-      "nsis": {
-        "installerIcon": "icons/icon.ico",
-        "installMode": "currentUser",
-        "languages": [
-          "English",
-          "SimpChinese"
-        ],
-        "displayLanguageSelector": true
       }
     }
   },
