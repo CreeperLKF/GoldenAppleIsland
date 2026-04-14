@@ -1,4 +1,8 @@
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
+
+use crate::app_settings;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -17,11 +21,6 @@ impl Slot {
     }
 }
 
-use tauri::{AppHandle, Emitter, Manager};
-use tauri_plugin_global_shortcut::GlobalShortcutExt;
-
-use crate::app_settings;
-
 pub fn register_all(app: &AppHandle) -> Result<(), String> {
     let settings = app_settings::get();
     set_impl(app, Slot::ToggleWindow, &settings.hotkey_toggle_window)?;
@@ -36,23 +35,37 @@ pub fn set(app: &AppHandle, slot: Slot, accel: &str) -> Result<(), String> {
 fn set_impl(app: &AppHandle, slot: Slot, accel: &str) -> Result<(), String> {
     let gs = app.global_shortcut();
 
-    // Always unregister any previous binding for this slot first.
     let old = match slot {
         Slot::ToggleWindow => app_settings::get().hotkey_toggle_window,
         Slot::ApproveAll => app_settings::get().hotkey_approve_all,
     };
-    if !old.is_empty() {
-        let _ = gs.unregister(old.as_str());
-    }
 
+    // Case 1: clearing the binding — just unregister the old one, no failure path.
     if accel.is_empty() {
+        if !old.is_empty() {
+            let _ = gs.unregister(old.as_str());
+        }
         return Ok(());
     }
 
-    gs.on_shortcut(accel, move |app, _sc, _event| {
-        dispatch(app, slot);
-    })
-    .map_err(|e| format!("register '{}' failed: {}", accel, e))?;
+    // Case 2: non-empty new accelerator — try to register it BEFORE touching the old
+    // binding so that a parse/OS failure leaves the old binding in place.
+    let register_result = gs
+        .on_shortcut(accel, move |app, _sc, _event| {
+            dispatch(app, slot);
+        })
+        .map_err(|e| format!("register '{}' failed: {}", accel, e));
+
+    if let Err(e) = register_result {
+        // New accelerator failed; old binding is still intact.
+        return Err(e);
+    }
+
+    // New accelerator is registered. Now it is safe to remove the old binding.
+    // (Skip if old == accel to avoid unregistering what we just registered.)
+    if !old.is_empty() && old.as_str() != accel {
+        let _ = gs.unregister(old.as_str());
+    }
 
     Ok(())
 }
