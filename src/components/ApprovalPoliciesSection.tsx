@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { useApprovalPolicies } from "../hooks/useApprovalPolicies";
 import PolicyDropdown, { DropdownValue } from "./ui/PolicyDropdown";
-import type { PolicyKind } from "../types/events";
+import { resolvePolicy } from "../lib/resolvePolicy";
+import ResolverPanel from "./ResolverPanel";
+import type { PolicyKind, RecentSession } from "../types/events";
 
 const SIMPLE_LABELS = { auto: "Auto", manual: "Manual" };
 
@@ -43,6 +45,18 @@ export default function ApprovalPoliciesSection() {
   const [promoting, setPromoting] = useState<string | null>(null);
   const [promoteSubdirs, setPromoteSubdirs] = useState(false);
 
+  const chipFor = (s: RecentSession) => {
+    const r = resolvePolicy(policies, {
+      sessionId: s.session_id,
+      cwd: s.start_cwd_normalized,
+      distro: s.distro,
+    });
+    const winner = r.tiers[r.winnerIndex];
+    const tier = winner.tier;
+    const kind = winner.kind === "auto" ? "auto" : "manual";
+    return `${tier} · ${kind}`;
+  };
+
   const onChangeGlobal = (next: DropdownValue) => {
     if (next === "inherit") return;
     setGlobal(next);
@@ -50,6 +64,7 @@ export default function ApprovalPoliciesSection() {
 
   return (
     <section style={{ padding: "8px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+      <ResolverPanel policies={policies} recent={recent} />
       <div className="font-semibold text-[var(--text-primary)]" style={{ fontSize: 12 }}>
         Approval policies
       </div>
@@ -225,15 +240,31 @@ export default function ApprovalPoliciesSection() {
         {recent.map((s) => (
           <div key={s.session_id} style={{ marginBottom: 6 }}>
             <div
+              className="flex items-center"
               style={{
                 fontSize: 11,
                 fontFamily: "monospace",
                 color: "var(--text-secondary)",
+                gap: 6,
               }}
               title={`${s.session_id} · ${s.start_cwd_normalized}`}
             >
-              {s.session_id.slice(0, 14)}…{"  "}
-              {s.distro} · {s.start_cwd_normalized} · {formatRelative(s.last_seen_at_ms)}
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
+                {s.session_id.slice(0, 14)}… {s.distro} · {s.start_cwd_normalized} ·{" "}
+                {formatRelative(s.last_seen_at_ms)}
+              </span>
+              <span
+                style={{
+                  fontSize: 10,
+                  padding: "1px 6px",
+                  borderRadius: 3,
+                  background: "var(--badge-permission-bg)",
+                  color: "var(--badge-permission-text)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {chipFor(s)}
+              </span>
             </div>
             <div className="flex items-center" style={{ gap: 8, marginTop: 2 }}>
               <PolicyDropdown
