@@ -1,3 +1,7 @@
+# Normalize all text files to LF in the repo. Git converts on checkout as
+# needed per platform. Keeps diffs and blames stable across Windows/WSL.
+* text=auto eol=lf
+
 # Force LF for shell scripts and WSL-side Node — CRLF breaks bash in WSL
 *.sh        text eol=lf
 *.mjs       text eol=lf
