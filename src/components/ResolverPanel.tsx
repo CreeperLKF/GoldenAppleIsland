@@ -81,7 +81,8 @@ export default function ResolverPanel({ policies, recent }: Props) {
         How policies resolve
       </div>
       <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-        session 的策略配置按解析链依次覆盖
+        Session policies apply along the resolve chain — later tiers override
+        earlier ones.
       </div>
 
       <div

@@ -227,16 +227,12 @@ fn position_window_at_cursor(
     });
     let margin = (8.0 * scale) as i32;
 
-    let (anchor_x, anchor_y) = match cursor {
-        Some(p) => (p.x as i32, p.y as i32),
-        None => (
-            mon_pos.x + mon_size.width as i32 - margin,
-            mon_pos.y + mon_size.height as i32 - margin,
-        ),
-    };
-
-    let mut x = anchor_x - win_size.width as i32 - margin;
-    let mut y = anchor_y - win_size.height as i32 - margin;
+    // No persisted position yet → center on the primary monitor. Predictable
+    // first-run behavior; once the user drags the popup, that position is
+    // saved and try_restore_popup_position takes over on subsequent shows.
+    let _ = cursor;
+    let mut x = mon_pos.x + (mon_size.width as i32 - win_size.width as i32) / 2;
+    let mut y = mon_pos.y + (mon_size.height as i32 - win_size.height as i32) / 2;
 
     let min_x = mon_pos.x + margin;
     let min_y = mon_pos.y + margin;
