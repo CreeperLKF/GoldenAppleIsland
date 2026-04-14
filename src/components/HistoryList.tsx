@@ -3,6 +3,7 @@ import type { HistoryEntry } from "../hooks/useHistory";
 
 interface HistoryListProps {
   items: HistoryEntry[];
+  collapsed: boolean;
 }
 
 function formatAgo(iso: string, now: number): string {
@@ -27,17 +28,34 @@ function statusGlyph(item: HistoryEntry): {
   return { glyph: "◷", color: "var(--text-tertiary)" };
 }
 
-export default function HistoryList({ items }: HistoryListProps) {
+export default function HistoryList({ items, collapsed }: HistoryListProps) {
   const [expanded, setExpanded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    if (items.length === 0) return;
+    if (items.length === 0 || collapsed) return;
     const id = window.setInterval(() => setNow(Date.now()), 10000);
     return () => window.clearInterval(id);
-  }, [items.length]);
+  }, [items.length, collapsed]);
 
   if (items.length === 0) return null;
+
+  if (collapsed) {
+    return (
+      <section
+        className="px-3 py-2 bg-[var(--bg-surface)]"
+        style={{ borderTop: "0.5px solid var(--border)" }}
+        aria-label="Recent decisions (collapsed)"
+      >
+        <div
+          className="font-semibold text-[var(--text-primary)]"
+          style={{ fontSize: 12 }}
+        >
+          Recent
+        </div>
+      </section>
+    );
+  }
 
   const visible = expanded ? items : items.slice(0, 5);
   const hasMore = items.length > 5;
