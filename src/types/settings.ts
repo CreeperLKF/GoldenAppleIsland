@@ -18,6 +18,8 @@ export interface AppSettings {
   settings_last_tab?: SettingsTabId;
   popup_position?: PopupPosition | null;
   recent_collapsed: boolean;
+  hotkey_toggle_window: string;
+  hotkey_approve_all: string;
 }
 
 export interface CachedHookStatus {

@@ -53,6 +53,18 @@ pub struct AppSettings {
     pub popup_position: Option<PopupPosition>,
     #[serde(default)]
     pub recent_collapsed: bool,
+    #[serde(default = "default_hotkey_toggle_window")]
+    pub hotkey_toggle_window: String,
+    #[serde(default = "default_hotkey_approve_all")]
+    pub hotkey_approve_all: String,
+}
+
+fn default_hotkey_toggle_window() -> String {
+    String::new()
+}
+
+fn default_hotkey_approve_all() -> String {
+    "Super+Shift+KeyA".to_string()
 }
 
 fn default_true() -> bool {
@@ -74,6 +86,8 @@ impl Default for AppSettings {
             settings_last_tab: None,
             popup_position: None,
             recent_collapsed: false,
+            hotkey_toggle_window: String::new(),
+            hotkey_approve_all: "Super+Shift+KeyA".to_string(),
         }
     }
 }
