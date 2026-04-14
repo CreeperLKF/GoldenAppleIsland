@@ -43,6 +43,7 @@ pub fn run() {
             commands::hide_popup,
             commands::get_app_settings,
             commands::update_app_settings,
+            commands::update_popup_position,
             commands::list_wsl_distros,
             commands::list_wsl_distros_smart,
             commands::check_wsl_distro_status,
@@ -154,10 +155,66 @@ pub fn sync_show_check(checked: bool) {
     }
 }
 
+/// Try to restore the popup's last persisted position. Returns true if the
+/// saved position passed all validations (monitor matched by name, saved rect
+/// fully inside that monitor) and was applied. Returns false otherwise —
+/// callers should fall back to the cursor/tray anchor path.
+fn try_restore_popup_position(window: &tauri::WebviewWindow) -> bool {
+    let saved = match app_settings::get().popup_position {
+        Some(p) => p,
+        None => return false,
+    };
+
+    let Ok(monitors) = window.available_monitors() else {
+        return false;
+    };
+
+    let monitor = monitors
+        .into_iter()
+        .find(|m| m.name().map(|n| n.as_str()) == Some(saved.monitor_name.as_str()));
+
+    let Some(monitor) = monitor else {
+        log::info!(
+            "restore_popup_position: saved monitor '{}' not found, falling back",
+            saved.monitor_name
+        );
+        return false;
+    };
+
+    let mon_pos = monitor.position();
+    let mon_size = monitor.size();
+    let win_size = match window.outer_size() {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+
+    let min_x = mon_pos.x;
+    let min_y = mon_pos.y;
+    let max_x = mon_pos.x + mon_size.width as i32 - win_size.width as i32;
+    let max_y = mon_pos.y + mon_size.height as i32 - win_size.height as i32;
+
+    if saved.x < min_x || saved.y < min_y || saved.x > max_x || saved.y > max_y {
+        log::info!(
+            "restore_popup_position: saved position {:?} outside monitor rect, falling back",
+            (saved.x, saved.y)
+        );
+        return false;
+    }
+
+    let _ = window.set_position(tauri::PhysicalPosition {
+        x: saved.x,
+        y: saved.y,
+    });
+    true
+}
+
 fn position_window_at_cursor(
     window: &tauri::WebviewWindow,
     cursor: Option<PhysicalPosition<f64>>,
 ) {
+    if try_restore_popup_position(window) {
+        return;
+    }
     let Ok(Some(monitor)) = window.primary_monitor() else {
         return;
     };
