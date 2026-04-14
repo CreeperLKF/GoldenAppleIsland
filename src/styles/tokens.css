@@ -34,6 +34,7 @@
   --session-approve-text: #1565C0;
 
   --accent-green: #34C759;
+  --accent-green-dark: #1F8A3C;
   --accent-amber: #FF9F0A;
 
   --font-title: 13px;
@@ -78,6 +79,9 @@
 
   --session-approve-bg: #0D2744;
   --session-approve-text: #64B5F6;
+
+  --accent-green: #30D158;
+  --accent-green-dark: #2FA94A;
 }
 
 @media (prefers-color-scheme: dark) {
