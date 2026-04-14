@@ -52,7 +52,7 @@ export function resolvePolicy(
   };
 
   // Distro
-  const distroRule = policies.per_distro[ctx.distro];
+  const distroRule = ctx.distro ? policies.per_distro[ctx.distro] : undefined;
   const distroTier: TierResult = {
     tier: "distro",
     matchedKey: distroRule ? ctx.distro : null,
@@ -81,9 +81,9 @@ export function resolvePolicy(
   };
 
   // Session
-  const sessionRule = policies.per_session.find(
-    (r) => r.session_id === ctx.sessionId,
-  );
+  const sessionRule = ctx.sessionId
+    ? policies.per_session.find((r) => r.session_id === ctx.sessionId)
+    : undefined;
   const sessionTier: TierResult = {
     tier: "session",
     matchedKey: sessionRule ? ctx.sessionId : null,
