@@ -16,7 +16,7 @@ interface Props {
 const FORCE_LABELS = {
   auto: "Force Auto",
   manual: "Force Manual",
-  inherit: "no override",
+  inherit: "No Override",
 };
 
 function forceToDropdownValue(f: PolicyKind | null): DropdownValue {
@@ -46,14 +46,32 @@ export default function PolicyPanel({
 
   return (
     <div
-      className="flex flex-col bg-[var(--bg-surface)]"
+      className="bg-[var(--bg-surface)]"
       style={{ borderTop: "0.5px solid var(--border)" }}
     >
       <div
-        className="flex items-center px-2"
-        style={{ height: 36, gap: 8 }}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "auto 1fr auto auto",
+          gridTemplateRows: "32px 32px",
+          columnGap: 8,
+          rowGap: 4,
+          padding: "6px 8px",
+          alignItems: "center",
+        }}
       >
-        <div style={{ flex: "1 1 0" }}>
+        {/* Row 1: Override Policy */}
+        <span
+          style={{
+            fontSize: 12,
+            color: "var(--text-secondary)",
+            textAlign: "right",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Override Policy
+        </span>
+        <div>
           <PolicyDropdown
             value={forceToDropdownValue(current)}
             allowInherit
@@ -63,32 +81,32 @@ export default function PolicyPanel({
             disabled={activeSessionId === null}
           />
         </div>
-        <div style={{ flex: "1.2 1 0", display: "flex", justifyContent: "flex-start" }}>
-          <PolicySplitButton
-            onCommit={onCommitSessionPolicy}
-            disabled={activeSessionId === null}
-          />
-        </div>
+
+        {/* Approve All: spans both rows, column 3 */}
         <button
           type="button"
           onClick={onApproveAll}
           disabled={pendingCount === 0}
           aria-label={`Approve all ${pendingCount} pending`}
-          className="rounded transition-[filter,opacity] hover:brightness-95 disabled:opacity-40"
+          className="transition-[filter,opacity] hover:brightness-110 disabled:opacity-40"
           style={{
-            flex: "1 1 0",
-            height: 24,
+            gridColumn: "3 / 4",
+            gridRow: "1 / 3",
+            width: 84,
+            height: "100%",
             fontSize: 12,
             fontWeight: 600,
-            borderWidth: "0.5px",
-            borderStyle: "solid",
-            borderColor: "var(--border)",
-            background: "transparent",
-            color: "var(--text-secondary)",
+            background: "var(--accent-green-dark)",
+            color: "#FFFFFF",
+            border: "none",
+            borderRadius: 6,
+            cursor: pendingCount === 0 ? "not-allowed" : "pointer",
           }}
         >
-          Approve all{pendingCount > 0 ? ` (${pendingCount})` : ""}
+          Approve All{pendingCount > 0 ? ` (${pendingCount})` : ""}
         </button>
+
+        {/* Recent toggle: spans both rows, column 4 */}
         {recentVisible && (
           <button
             type="button"
@@ -96,9 +114,12 @@ export default function PolicyPanel({
             aria-label={recentCollapsed ? "Expand Recent" : "Collapse Recent"}
             className="rounded hover:text-[var(--text-primary)]"
             style={{
+              gridColumn: "4 / 5",
+              gridRow: "1 / 3",
               width: 24,
               height: 24,
-              flex: "0 0 auto",
+              alignSelf: "center",
+              justifySelf: "center",
               background: "transparent",
               border: "none",
               color: "var(--text-secondary)",
@@ -112,6 +133,24 @@ export default function PolicyPanel({
             {recentCollapsed ? "▸" : "▾"}
           </button>
         )}
+
+        {/* Row 2: Session Policy */}
+        <span
+          style={{
+            fontSize: 12,
+            color: "var(--text-secondary)",
+            textAlign: "right",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Session Policy
+        </span>
+        <div>
+          <PolicySplitButton
+            onCommit={onCommitSessionPolicy}
+            disabled={activeSessionId === null}
+          />
+        </div>
       </div>
     </div>
   );
