@@ -1,39 +1,37 @@
 # Golden Apple Island
 
-A lightweight Windows system tray app that intercepts Claude Code hook events from WSL and surfaces them as one-click approval cards — so you never have to babysit a terminal tab again.
+One-click Claude Code approvals from the Windows tray.
+
+*Loved \*-Island on macOS and wish Windows had something like it? Try Golden Apple Island.*
 
 Built with Tauri v2, React, and Tailwind CSS.
 
-## Why
+## Who needs this
 
-When Claude Code runs in WSL, every tool call (shell command, file write, file read) requires you to switch to the terminal and confirm. Running multiple sessions in parallel turns approval into a juggling act. Golden Apple Island moves that approval to a native Windows popup anchored to the tray, with approve/deny buttons, a Windows toast, and a 5-minute auto-deny timeout.
+Anyone who runs Claude Code on Windows — natively, through WSL, or over SSH (coming soon) — and wants every approval prompt turned into a single click, a pre-approved auto-decision, or eventually a smart AI-assisted judgment.
 
-## How it works
+## Why Golden Apple Island
 
-```
-WSL (Linux)                                Windows
-─────────────                              ──────────────────────
-Claude Code                                Golden Apple Island
-   │                                          ▲
-   ▼                                          │
-pre-tool-use.sh  ──►  bridge.mjs  ══ ws ═══►  WebSocket server
-   ▲                                          │   (localhost:19876)
-   │                                          ▼
-   └──── exit 0/1 ◄── approve/deny ◄──  Approval popup + tray
-```
+> [!TIP]
+> **Auto-approve beats YOLO.** Agents that know they're running in YOLO mode tend to wander — pulling parent-directory listings, probing sibling projects, gathering context they don't actually need. Auto-approve gives you the same hands-off speed while keeping the agent inside a supervised boundary, so it stays focused on the task at hand. Every decision is logged in the Recent history, so if something slips past your rules you can audit exactly where afterward.
 
-1. A bash hook script in WSL catches the pre-tool-use event.
-2. A zero-dependency Node bridge forwards the event over `ws://localhost:19876`.
-3. The Tauri app shows a toast and an approval card.
-4. Your click routes back over the same WebSocket, the hook exits 0 (approve) or 1 (deny), and Claude Code continues.
+- **Built for Windows developers.** Native tray icon, Windows toasts, keyboard shortcuts, and popups that remember where you dragged them — no terminal context-switching.
+- **Meets Claude Code wherever it runs.** First-class WSL today; SSH on the roadmap. One tray app can serve every distro and host on your machine at once.
+- **Approval policies that compose.** Global, per-distribution, per-folder, and per-session rules resolve along a clear precedence chain — mark a trusted workspace auto-approve, keep production manual, and forget about the rest. Hook modes are equally configurable for when you need to go deeper.
 
-If you don't click within 5 minutes, the event auto-denies.
+## Quick start
+
+1. **Install the app.** Grab the latest `.msi` from [GitHub Releases](https://github.com/CreeperLKF/GoldenAppleIsland/releases), run it, and launch **Golden Apple Island** from the Start menu — it appears in your system tray.
+2. **Enable your WSL distros.** Right-click the tray icon → **Settings → Hook Management → WSL Instances → Enable all**. The app installs the hook into every distribution and registers it in `~/.claude/settings.json` for you.
+3. **Try it.** Run `claude` in any WSL shell and have it do something that needs a tool call. A Windows toast pops up and the tray shows an approval card — click ✓ or ✗ and the session unblocks.
+
+> **Networking note.** WSL support currently requires `networkingMode = mirrored` in your `.wslconfig` so the bridge can reach the Windows WebSocket server on `127.0.0.1`. NAT and other WSL network modes are on the roadmap.
 
 ## Install
 
-### 1. Install the Windows app
+**From a release (recommended).** Follow **Quick start** above — one `.msi` covers everything.
 
-Clone this repo on Windows and build it:
+**From source.** Clone and build on Windows:
 
 ```bash
 git clone https://github.com/CreeperLKF/GoldenAppleIsland.git
@@ -42,158 +40,49 @@ npm install
 npm run tauri build
 ```
 
-The built `.msi` installer lands in `src-tauri/target/release/bundle/msi/`. Install it and launch **Golden Apple Island** — it will appear in your system tray.
+The `.msi` lands in `src-tauri/target/release/bundle/msi/`. Install it, launch the app, and enable your WSL distros from **Settings → Hook Management → WSL Instances → Enable all** exactly as in Quick start.
 
-Prerequisites: Node 20+, Rust (via `rustup`), and the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for Windows (MSVC build tools + WebView2).
+Prerequisites: Node 20+, Rust via `rustup`, and the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for Windows (MSVC build tools + WebView2).
 
-### 2. Install the WSL hook
-
-From your WSL shell, run:
-
-```bash
-cd /mnt/c/path/to/GoldenAppleIsland
-bash wsl/install.sh
-```
-
-This copies `pre-tool-use.sh` and `bridge.mjs` to `~/.claude/hooks/` and registers the `PreToolUse` hook in `~/.claude/settings.json` (merging with `jq` if available, otherwise printing a manual snippet).
-
-Prerequisite: Node 22+ in WSL (required for the global `WebSocket` client).
-
-## Usage
-
-1. Keep Golden Apple Island running in the Windows tray.
-2. Start `claude` in WSL as usual.
-3. When Claude Code wants to run a tool, a toast appears and the tray popup shows a card: tool category, the command or file path, and approve/deny buttons.
-4. Click once. The WSL session unblocks immediately.
-
-Keyboard shortcuts in the popup:
-
-| Key | Action |
-|---|---|
-| `A` | Approve the topmost pending card |
-| `D` | Deny the topmost pending card |
-| `Esc` | Hide the popup |
-
-## Development
+## Develop
 
 ```bash
 npm install
 npm run tauri dev
 ```
 
-This launches the Rust tray app with the Vite dev server on `http://localhost:5173` and hot-reloads the React frontend. Stop with `Ctrl+C`.
+The Rust tray app launches with the Vite dev server on `http://localhost:5173` and hot-reloads the React frontend. `Ctrl+C` to stop.
 
-To check the backend without launching the app:
-
-```bash
-cargo check --manifest-path src-tauri/Cargo.toml
-```
-
-To build only the frontend:
+For fast iteration without a full build:
 
 ```bash
-npm run build
+npm run check              # tsc --noEmit + cargo check
+npm run build              # frontend only
 ```
 
-## Project structure
+Release cadence and the full script reference live in [`docs/releasing.md`](docs/releasing.md).
 
-```
-GoldenAppleIsland/
-├── src/                  # React + Tailwind frontend (Vite)
-│   ├── components/       # Header, ApprovalCard, PopupWindow, …
-│   ├── hooks/            # useWebSocket, usePendingEvents, …
-│   ├── types/events.ts   # HookEvent / HookResponse contract
-│   └── styles/tokens.css # Light/dark design tokens
-├── src-tauri/            # Rust + Tauri v2 backend
-│   ├── src/ws.rs         # tokio-tungstenite WebSocket server
-│   ├── src/commands.rs   # Tauri commands called from the webview
-│   └── src/lib.rs        # Tray, window, app setup
-└── wsl/                  # WSL-side hook and bridge
-    ├── pre-tool-use.sh
-    ├── bridge.mjs
-    └── install.sh
-```
+## Using the popup
 
-## WebSocket protocol
+Left-click the tray icon to show or hide the popup. Drag it anywhere — its position persists across restarts. Keyboard shortcuts while the popup has focus:
 
-The app listens on `127.0.0.1:19876`. Messages are JSON.
-
-**Bridge → app:**
-
-```json
-{
-  "type": "hook_event",
-  "id": "evt_abc123",
-  "session_id": "sess_def456",
-  "session_cwd": "/home/user/projects/my-app",
-  "hook_type": "pre_tool_use",
-  "tool_name": "bash",
-  "tool_input": { "command": "rm -rf ./dist" },
-  "timestamp": "2026-04-11T10:30:00Z"
-}
-```
-
-**App → bridge:**
-
-```json
-{ "type": "hook_response", "id": "evt_abc123", "action": "approve" }
-```
-
-`action` is `"approve"` or `"deny"`. Responses are routed by `id` so multiple bridge instances can share the server.
-
-## Configuration
-
-| Env var | Scope | Default | Purpose |
-|---|---|---|---|
-| `CLAUDE_HOOK_GUARD_TIMEOUT_MS` | WSL (bridge.mjs) | `300000` | Client-side wait before printing `deny` |
-
-## Troubleshooting
-
-- **Toast appears but no popup.** Left-click the tray icon — the popup is hidden by default.
-- **`Connection refused` in WSL.** The Windows app isn't running. Launch it from the Start menu.
-- **Bash script exits with CRLF errors.** The repo enforces LF on `wsl/**` via `.gitattributes`; re-clone or `git checkout -- wsl/` to reset line endings.
-- **`WebSocket is not defined` in bridge.** Upgrade WSL Node to 22+.
-- **Hook not firing.** Check `~/.claude/settings.json` has a `hooks.PreToolUse` entry pointing to `~/.claude/hooks/pre-tool-use.sh`, and that the script is `chmod +x`.
-
-## Releasing
-
-Versions across `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` stay in lock-step. Use the bump script and let CI do the rest:
-
-```bash
-npm run release patch   # or: minor / major / 1.2.3
-git add -A
-git commit -m "chore: release v$(node -p "require('./package.json').version")"
-git tag v$(node -p "require('./package.json').version")
-git push --follow-tags
-```
-
-Pushing a `v*` tag triggers `.github/workflows/release.yml`, which on a Windows runner builds the MSI and NSIS installers plus the WSL tarball, then attaches them to a new GitHub Release.
-
-### Local build
-
-```bash
-npm install
-npm run tauri:build     # produces MSI + NSIS under src-tauri/target/release/bundle/
-npm run bundle:wsl      # produces dist-wsl/golden-apple-island-wsl-<version>.tar.gz
-```
-
-### Scripts
-
-| Script | What it does |
+| Key | Action |
 |---|---|
-| `npm run dev` | Vite dev server only |
-| `npm run tauri:dev` | Full Tauri dev (Vite + Rust) |
-| `npm run tauri:build` | Production MSI + NSIS installer |
-| `npm run build` | `tsc` + Vite frontend build only |
-| `npm run check` | Typecheck + `cargo check` (no build) |
-| `npm run bundle:wsl` | Tarball of `wsl/` for standalone distribution |
-| `npm run release <bump>` | Bump version in all three manifests |
-| `npm run clean` | Wipe `dist/`, `src-tauri/target/`, caches |
+| `A` | Approve the topmost pending card |
+| `Shift+A` | Approve **all** currently pending cards |
+| `D` | Deny the topmost pending card |
+| `Esc` | Hide the popup |
 
-## Status
+Per-distribution, per-folder, and per-session approval rules live under **Settings → Approval Policy**.
 
-**v1 — P0 + UI polish.** Covers hook installation, event reception, approval UI, tray, toast, timeout handling, approve-all, in-memory auto-approve session, and a decision history view. Planned for later: auto-approve by tool, diff preview for file writes, global hotkey, and a rule engine. See `docs/prd.md` in the companion development workspace for the full roadmap.
+## Documentation
 
-## License
+Deeper technical docs live in [`docs/`](docs/):
 
-MIT — see [LICENSE](LICENSE).
+| Looking for… | Read |
+|---|---|
+| How the hook, bridge, and Windows app fit together | [`docs/architecture.md`](docs/architecture.md) |
+| The WebSocket message schema | [`docs/websocket-protocol.md`](docs/websocket-protocol.md) |
+| Release process and build scripts | [`docs/releasing.md`](docs/releasing.md) |
+
+Product requirements, design specs, and implementation plans live in the companion development workspace repo.
