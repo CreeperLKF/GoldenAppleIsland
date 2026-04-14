@@ -126,11 +126,16 @@ export default function PopupWindow() {
 
   const collapsed = appSettings?.collapsed ?? false;
   const pinned = appSettings?.always_on_top ?? true;
+  const recentCollapsed = appSettings?.recent_collapsed ?? false;
 
   const toggleCollapse = useCallback(() => {
     const next = !collapsed;
     updateSettings({ collapsed: next });
   }, [collapsed, updateSettings]);
+
+  const toggleRecentCollapse = useCallback(() => {
+    updateSettings({ recent_collapsed: !recentCollapsed });
+  }, [recentCollapsed, updateSettings]);
 
   const togglePin = useCallback(() => {
     const next = !pinned;
@@ -375,8 +380,11 @@ export default function PopupWindow() {
             pendingCount={visible.length}
             onCommitSessionPolicy={onCommitSessionPolicy}
             onApproveAll={approveAll}
+            recentVisible={history.length > 0}
+            recentCollapsed={recentCollapsed}
+            onToggleRecent={toggleRecentCollapse}
           />
-          <HistoryList items={history} />
+          <HistoryList items={history} collapsed={recentCollapsed} />
         </>
       )}
     </div>
