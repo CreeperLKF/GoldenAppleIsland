@@ -1,3 +1,5 @@
+export type SettingsTabId = "general" | "approval" | "hooks";
+
 export interface AppSettings {
   toast_enabled: boolean;
   sound_enabled: boolean;
@@ -7,6 +9,7 @@ export interface AppSettings {
   log_to_file: boolean;
   wsl_status_cache: Record<string, CachedHookStatus>;
   windows_hook_cache: CachedHookStatus | null;
+  settings_last_tab?: SettingsTabId;
 }
 
 export interface CachedHookStatus {

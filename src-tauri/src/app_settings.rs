@@ -40,6 +40,8 @@ pub struct AppSettings {
     pub windows_hook_cache: Option<CachedHookStatus>,
     #[serde(default)]
     pub approval_policies: ApprovalPolicies,
+    #[serde(default)]
+    pub settings_last_tab: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -58,6 +60,7 @@ impl Default for AppSettings {
             wsl_status_cache: HashMap::new(),
             windows_hook_cache: None,
             approval_policies: ApprovalPolicies::default(),
+            settings_last_tab: None,
         }
     }
 }
