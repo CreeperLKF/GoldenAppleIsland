@@ -1,5 +1,11 @@
 export type SettingsTabId = "general" | "approval" | "hooks";
 
+export interface PopupPosition {
+  x: number;
+  y: number;
+  monitor_name: string;
+}
+
 export interface AppSettings {
   toast_enabled: boolean;
   sound_enabled: boolean;
@@ -10,6 +16,8 @@ export interface AppSettings {
   wsl_status_cache: Record<string, CachedHookStatus>;
   windows_hook_cache: CachedHookStatus | null;
   settings_last_tab?: SettingsTabId;
+  popup_position?: PopupPosition | null;
+  recent_collapsed: boolean;
 }
 
 export interface CachedHookStatus {
