@@ -16,9 +16,9 @@ import { useConnection } from "../hooks/useConnection";
 import { useHistory } from "../hooks/useHistory";
 import { useApprovalPolicies } from "../hooks/useApprovalPolicies";
 import { useAppSettings } from "../hooks/useAppSettings";
-import type { HookEvent, PolicyKind, PolicyScope } from "../types/events";
+import type { HookEvent, PolicyKind } from "../types/events";
 import { detectVariant } from "../types/events";
-import type { DropdownValue } from "./ui/PolicyDropdown";
+import { useForceOverrides } from "../hooks/useForceOverrides";
 
 const APPROVE_ALL_STAGGER_MS = 50;
 
@@ -55,6 +55,8 @@ export default function PopupWindow() {
     onResolve,
   });
 
+  const force = useForceOverrides();
+
   const [showUpdateHint, setShowUpdateHint] = useState(false);
   // Tracks the most recently seen event so the policy dropdown remains
   // actionable after the queue drains — the user can pre-set Force Auto
@@ -67,14 +69,28 @@ export default function PopupWindow() {
         setShowUpdateHint(true);
       }
       setLastSeenEvent(event);
+
+      // Force override pre-filter: if this session is forced to auto,
+      // approve the event immediately. Manual force is a no-op on the
+      // frontend side because backend auto-resolution already happens
+      // before the event reaches this popup via the separate
+      // `hook_event_auto_resolved` channel.
+      const forced = force.get(event.session_id);
+      if (forced === "auto") {
+        enqueue(event);
+        // Schedule approval on next tick so enqueue commits first.
+        window.setTimeout(() => resolve(event.id, "approve"), 0);
+        return;
+      }
+
       enqueue(event);
     },
-    [enqueue, showUpdateHint],
+    [enqueue, resolve, showUpdateHint, force],
   );
 
   useWebSocket(onEvent);
 
-  const { policies, setSession, removeSession } = useApprovalPolicies();
+  const { setSession, removeSession } = useApprovalPolicies();
 
   const visible = useMemo(
     () => pending.filter((e) => !resolving.has(e.id)),
@@ -158,40 +174,27 @@ export default function PopupWindow() {
   // empty between events of the same Claude run.
   const activeEvent = top ?? lastSeenEvent;
 
-  const topResolved = useMemo(() => {
-    if (!top) return null;
-    if (top.resolved_kind && top.resolved_scope) {
-      return { kind: top.resolved_kind, scope: top.resolved_scope };
-    }
-    // Fallback for events from before backend tagging landed (defensive).
-    return { kind: "manual" as PolicyKind, scope: "global" as PolicyScope };
-  }, [top]);
-
-  const sessionOverride: PolicyKind | null = useMemo(() => {
-    if (!activeEvent) return null;
-    const rule = policies.per_session.find(
-      (r) => r.session_id === activeEvent.session_id,
-    );
-    return rule ? rule.kind : null;
-  }, [activeEvent, policies]);
-
-  const onChangePolicy = useCallback(
-    async (next: DropdownValue) => {
+  const onCommitSessionPolicy = useCallback(
+    async (kind: PolicyKind | null) => {
       if (!activeEvent) return;
-      if (next === "inherit") {
-        await removeSession(activeEvent.session_id).catch(log.error);
-        return;
-      }
-      await setSession(activeEvent.session_id, next).catch(log.error);
-      if (next === "auto") {
-        // Cascade: approve consecutive same-session events from the top of
-        // the current pending queue. If the queue is empty this is a no-op,
-        // and the rule still applies to future events from this session.
-        const sid = activeEvent.session_id;
-        for (const e of pending) {
-          if (e.session_id !== sid) break;
-          resolve(e.id, "approve");
+      const sid = activeEvent.session_id;
+      try {
+        if (kind === null) {
+          await removeSession(sid);
+        } else {
+          await setSession(sid, kind);
+          if (kind === "auto") {
+            // Cascade: auto-approve consecutive same-session events at
+            // the head of the queue. Preserves the old dropdown's cascade
+            // behavior, now on the split button.
+            for (const e of pending) {
+              if (e.session_id !== sid) break;
+              resolve(e.id, "approve");
+            }
+          }
         }
+      } catch (err) {
+        log.error(`onCommitSessionPolicy failed: ${String(err)}`);
       }
     },
     [activeEvent, pending, resolve, setSession, removeSession],
@@ -320,11 +323,9 @@ export default function PopupWindow() {
             </div>
           )}
           <PolicyPanel
-            topEvent={top}
-            topResolved={topResolved}
-            sessionOverride={sessionOverride}
+            activeSessionId={activeEvent?.session_id ?? null}
             pendingCount={visible.length}
-            onChangePolicy={onChangePolicy}
+            onCommitSessionPolicy={onCommitSessionPolicy}
             onApproveAll={approveAll}
           />
           <HistoryList items={history} />
