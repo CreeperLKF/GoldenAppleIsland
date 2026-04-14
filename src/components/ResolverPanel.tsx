@@ -6,46 +6,61 @@ interface Props {
   recent: RecentSession[];
 }
 
-function truncateMiddle(s: string, max: number): string {
-  if (s.length <= max) return s;
-  const keep = Math.max(4, Math.floor((max - 1) / 2));
-  return `${s.slice(0, keep)}…${s.slice(s.length - keep)}`;
-}
+const CHAIN: Array<TierResult["tier"]> = [
+  "global",
+  "distro",
+  "folder",
+  "session",
+];
 
-const TIER_LABEL: Record<string, string> = {
+const TIER_LABEL: Record<TierResult["tier"], string> = {
+  global: "global",
+  distro: "distribution",
+  folder: "folder",
+  session: "session",
+};
+
+const TIER_LABEL_TITLE: Record<TierResult["tier"], string> = {
   global: "Global",
   distro: "Distribution",
   folder: "Folder",
   session: "Session",
 };
 
-function tierDisplay(t: TierResult): {
-  label: string;
-  key: string;
-  kind: string;
-  suffix: string;
-} {
-  const label = TIER_LABEL[t.tier] ?? t.tier;
-  let key = "—";
-  if (t.matchedKey) {
-    key = t.tier === "session"
-      ? truncateMiddle(t.matchedKey, 14)
-      : truncateMiddle(t.matchedKey, 28);
+function truncateMiddle(s: string, max: number): string {
+  if (s.length <= max) return s;
+  const keep = Math.max(4, Math.floor((max - 1) / 2));
+  return `${s.slice(0, keep)}…${s.slice(s.length - keep)}`;
+}
+
+function formatResult(t: TierResult): string {
+  const tierLabel = TIER_LABEL_TITLE[t.tier];
+  const kindLabel = t.kind === "auto" ? "Auto" : t.kind === "manual" ? "Manual" : "—";
+  if (t.tier === "global") {
+    return `→ Global default → ${kindLabel}`;
   }
-  const kind = t.kind
-    ? t.kind === "auto"
-      ? "Auto"
-      : "Manual"
+  const key = t.matchedKey
+    ? t.tier === "session"
+      ? truncateMiddle(t.matchedKey, 14)
+      : truncateMiddle(t.matchedKey, 32)
     : "—";
   const suffix =
-    t.tier === "folder" && t.kind && t.includeSubdirectories
-      ? " (subdirs)"
-      : "";
-  return { label, key, kind, suffix };
+    t.tier === "folder" && t.includeSubdirectories ? " (includes subdirs)" : "";
+  return `→ ${tierLabel} matched ${key} → ${kindLabel}${suffix}`;
 }
 
 export default function ResolverPanel({ policies, recent }: Props) {
   const session = recent[0] ?? null;
+
+  const result = session
+    ? resolvePolicy(policies, {
+        sessionId: session.session_id,
+        cwd: session.start_cwd_normalized,
+        distro: session.distro,
+      })
+    : null;
+
+  const winnerTier = result ? result.tiers[result.winnerIndex]?.tier ?? null : null;
 
   return (
     <div
@@ -66,88 +81,87 @@ export default function ResolverPanel({ policies, recent }: Props) {
         How policies resolve
       </div>
       <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-        More specific tiers override less specific ones — the first match wins,
-        top to bottom.
+        session 的策略配置按解析链依次覆盖
       </div>
 
-      {session === null ? (
+      <div
+        style={{
+          fontFamily: "monospace",
+          fontSize: 11,
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 4,
+          marginTop: 2,
+        }}
+      >
+        <span style={{ color: "var(--text-tertiary)" }}>resolve chain:&nbsp;</span>
+        {CHAIN.map((tier, i) => {
+          const isWinner = tier === winnerTier;
+          return (
+            <span key={tier} style={{ display: "inline-flex", alignItems: "center" }}>
+              <span
+                style={
+                  isWinner
+                    ? {
+                        color: "var(--text-primary)",
+                        fontWeight: 600,
+                        background: "var(--badge-permission-bg)",
+                        padding: "0 4px",
+                        borderRadius: 3,
+                      }
+                    : {
+                        color: "var(--text-tertiary)",
+                      }
+                }
+              >
+                {TIER_LABEL[tier]}
+              </span>
+              {i < CHAIN.length - 1 && (
+                <span style={{ color: "var(--text-tertiary)", margin: "0 4px" }}>
+                  ▸
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </div>
+
+      {session && result ? (
+        <>
+          <div
+            style={{
+              fontFamily: "monospace",
+              fontSize: 11,
+              color: "var(--text-tertiary)",
+            }}
+            title={`${session.session_id} · ${session.start_cwd_normalized}`}
+          >
+            last session:&nbsp;&nbsp;
+            {truncateMiddle(session.session_id, 14)} ·{" "}
+            {truncateMiddle(session.start_cwd_normalized, 32)} · {session.distro}
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: "var(--text-primary)",
+              marginTop: 2,
+            }}
+          >
+            {formatResult(result.tiers[result.winnerIndex])}
+          </div>
+        </>
+      ) : (
         <div
           style={{
             fontSize: 11,
             color: "var(--text-tertiary)",
-            padding: "6px 0",
+            padding: "2px 0",
           }}
         >
-          No sessions seen yet — the resolver will show the winning tier once
-          an event arrives.
+          No sessions seen yet — the resolver will show which tier wins once an
+          event arrives.
         </div>
-      ) : (
-        <>
-          <div
-            style={{
-              fontSize: 11,
-              color: "var(--text-tertiary)",
-              fontFamily: "monospace",
-            }}
-            title={`${session.session_id} · ${session.start_cwd_normalized}`}
-          >
-            Session: {truncateMiddle(session.session_id, 14)} ·{" "}
-            {truncateMiddle(session.start_cwd_normalized, 32)} ·{" "}
-            {session.distro}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {(() => {
-              const result = resolvePolicy(policies, {
-                sessionId: session.session_id,
-                cwd: session.start_cwd_normalized,
-                distro: session.distro,
-              });
-              return result.tiers.map((t, i) => {
-                const d = tierDisplay(t);
-                const isWinner = i === result.winnerIndex;
-                return (
-                  <div
-                    key={t.tier}
-                    className="flex items-center"
-                    style={{
-                      gap: 8,
-                      fontSize: 11,
-                      paddingLeft: 6,
-                      borderLeft: isWinner
-                        ? "2px solid var(--accent, #4aa)"
-                        : "2px solid transparent",
-                      color: isWinner
-                        ? "var(--text-primary)"
-                        : "var(--text-tertiary)",
-                      fontWeight: isWinner ? 600 : 400,
-                    }}
-                  >
-                    <span style={{ width: 86 }}>{d.label}</span>
-                    <span
-                      style={{
-                        flex: 1,
-                        fontFamily: "monospace",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                      title={t.matchedKey ?? ""}
-                    >
-                      {d.key}
-                    </span>
-                    <span style={{ width: 70 }}>
-                      {d.kind}
-                      {d.suffix}
-                    </span>
-                    <span style={{ width: 60, textAlign: "right" }}>
-                      {isWinner ? "✓ WINNER" : "·"}
-                    </span>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-        </>
       )}
     </div>
   );
