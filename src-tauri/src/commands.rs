@@ -72,6 +72,9 @@ pub fn update_app_settings(patch: Value) -> AppSettings {
     if let Some(b) = patch.get("collapsed").and_then(|v| v.as_bool()) {
         current.collapsed = b;
     }
+    if let Some(b) = patch.get("recent_collapsed").and_then(|v| v.as_bool()) {
+        current.recent_collapsed = b;
+    }
     if let Some(b) = patch.get("log_to_file").and_then(|v| v.as_bool()) {
         current.log_to_file = b;
     }
@@ -87,6 +90,17 @@ pub fn update_app_settings(patch: Value) -> AppSettings {
             current.port = new_port;
         }
     }
+    app_settings::set(current)
+}
+
+#[tauri::command]
+pub fn update_popup_position(x: i32, y: i32, monitor_name: String) -> AppSettings {
+    let mut current = app_settings::get();
+    current.popup_position = Some(crate::app_settings::PopupPosition {
+        x,
+        y,
+        monitor_name,
+    });
     app_settings::set(current)
 }
 
