@@ -63,6 +63,8 @@ export default function PolicyPanel({
         {/* Row 1: Override Policy */}
         <span
           style={{
+            gridColumn: "1 / 2",
+            gridRow: "1 / 2",
             fontSize: 12,
             color: "var(--text-secondary)",
             textAlign: "right",
@@ -71,7 +73,7 @@ export default function PolicyPanel({
         >
           Override Policy
         </span>
-        <div>
+        <div style={{ gridColumn: "2 / 3", gridRow: "1 / 2" }}>
           <PolicyDropdown
             value={forceToDropdownValue(current)}
             allowInherit
@@ -137,6 +139,8 @@ export default function PolicyPanel({
         {/* Row 2: Session Policy */}
         <span
           style={{
+            gridColumn: "1 / 2",
+            gridRow: "2 / 3",
             fontSize: 12,
             color: "var(--text-secondary)",
             textAlign: "right",
@@ -145,7 +149,7 @@ export default function PolicyPanel({
         >
           Session Policy
         </span>
-        <div>
+        <div style={{ gridColumn: "2 / 3", gridRow: "2 / 3" }}>
           <PolicySplitButton
             onCommit={onCommitSessionPolicy}
             disabled={activeSessionId === null}

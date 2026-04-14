@@ -65,8 +65,10 @@ export default function PolicySplitButton({
         className="rounded-l bg-[var(--bg-surface)] text-[var(--text-primary)] hover:brightness-95 disabled:opacity-40"
         style={{
           height: 24,
-          padding: "0 8px",
+          minWidth: 140,
+          padding: "0 12px",
           fontSize: 12,
+          whiteSpace: "nowrap",
           borderWidth: "0.5px",
           borderStyle: "solid",
           borderColor: "var(--border)",
@@ -79,12 +81,11 @@ export default function PolicySplitButton({
       </button>
       <button
         type="button"
-        onClick={() => !disabled && setMenuOpen((v) => !v)}
-        disabled={disabled}
+        onClick={() => setMenuOpen((v) => !v)}
         aria-label="Open policy menu"
         aria-haspopup="menu"
         aria-expanded={menuOpen}
-        className="rounded-r bg-[var(--bg-surface)] text-[var(--text-primary)] hover:brightness-95 disabled:opacity-40"
+        className="rounded-r bg-[var(--bg-surface)] text-[var(--text-primary)] hover:brightness-95"
         style={{
           height: 24,
           width: 20,
