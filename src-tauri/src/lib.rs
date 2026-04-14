@@ -36,6 +36,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             commands::respond,
             commands::get_pending_events,
@@ -143,6 +144,10 @@ pub fn run() {
             tauri::async_runtime::spawn(async move {
                 ws::serve(app_handle).await;
             });
+
+            if let Err(e) = hotkeys::register_all(app.handle()) {
+                log::warn!("register_all hotkeys: {}", e);
+            }
 
             Ok(())
         })
