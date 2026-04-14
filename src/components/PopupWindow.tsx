@@ -77,15 +77,32 @@ export default function PopupWindow() {
       // `hook_event_auto_resolved` channel.
       const forced = force.get(event.session_id);
       if (forced === "auto") {
-        enqueue(event);
-        // Schedule approval on next tick so enqueue commits first.
-        window.setTimeout(() => resolve(event.id, "approve"), 0);
+        // Bypass the pending queue entirely: send the approve response to
+        // the backend directly and record it in history as an auto-resolved
+        // entry, matching the shape the `hook_event_auto_resolved` listener
+        // uses for backend-side auto resolution. Going through enqueue/resolve
+        // here would race with usePendingEvents' pendingRef effect and drop
+        // the history entry.
+        invoke("respond", {
+          id: event.id,
+          action: "approve",
+          answer: null,
+          sessionMode: null,
+        }).catch(log.error);
+        pushHistory({
+          id: event.id,
+          tool_name: event.tool_name,
+          summary: summarize(event),
+          action: "approve",
+          timestamp: new Date().toISOString(),
+          source: "auto",
+        });
         return;
       }
 
       enqueue(event);
     },
-    [enqueue, resolve, showUpdateHint, force],
+    [enqueue, pushHistory, showUpdateHint, force],
   );
 
   useWebSocket(onEvent);
