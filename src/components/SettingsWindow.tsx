@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import log from "../lib/log";
 import ApprovalPoliciesSection from "./ApprovalPoliciesSection";
+import GlobalShortcutsSection from "./GlobalShortcutsSection";
 import LoggingSection from "./LoggingSection";
 import NotificationsSection from "./NotificationsSection";
 import PortSection from "./PortSection";
@@ -45,6 +46,9 @@ function GeneralTab({
       <SubsectionDivider />
       <SubsectionHeading>Debugging</SubsectionHeading>
       <LoggingSection settings={settings} onChange={update} />
+      <SubsectionDivider />
+      <SubsectionHeading>Global shortcuts</SubsectionHeading>
+      <GlobalShortcutsSection settings={settings} onChange={update} />
     </div>
   );
 }
