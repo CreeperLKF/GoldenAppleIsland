@@ -21,6 +21,13 @@ fn default_port() -> u16 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PopupPosition {
+    pub x: i32,
+    pub y: i32,
+    pub monitor_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     #[serde(default = "default_true")]
     pub toast_enabled: bool,
@@ -42,6 +49,10 @@ pub struct AppSettings {
     pub approval_policies: ApprovalPolicies,
     #[serde(default)]
     pub settings_last_tab: Option<String>,
+    #[serde(default)]
+    pub popup_position: Option<PopupPosition>,
+    #[serde(default)]
+    pub recent_collapsed: bool,
 }
 
 fn default_true() -> bool {
@@ -61,6 +72,8 @@ impl Default for AppSettings {
             windows_hook_cache: None,
             approval_policies: ApprovalPolicies::default(),
             settings_last_tab: None,
+            popup_position: None,
+            recent_collapsed: false,
         }
     }
 }
