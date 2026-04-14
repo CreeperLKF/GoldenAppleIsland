@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import { currentMonitor, getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import log from "../lib/log";
 import Header from "./Header";
 import SessionStrip from "./SessionStrip";
@@ -236,6 +236,37 @@ export default function PopupWindow() {
     return () => {
       observer.disconnect();
       if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const win = getCurrentWindow();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let lastX = 0;
+    let lastY = 0;
+
+    const unlisten = win.onMoved(({ payload }) => {
+      lastX = payload.x;
+      lastY = payload.y;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(async () => {
+        try {
+          const monitor = await currentMonitor();
+          const monitorName = monitor?.name ?? "";
+          await invoke("update_popup_position", {
+            x: lastX,
+            y: lastY,
+            monitorName,
+          });
+        } catch (err) {
+          log.error(`update_popup_position failed: ${String(err)}`);
+        }
+      }, 300);
+    });
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      unlisten.then((u) => u()).catch(() => {});
     };
   }, []);
 
