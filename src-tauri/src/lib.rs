@@ -7,6 +7,7 @@ mod session_ctx;
 mod ws;
 mod wsl_admin;
 mod windows_hook;
+mod hotkeys;
 
 use std::sync::OnceLock;
 
