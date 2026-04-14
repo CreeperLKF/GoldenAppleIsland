@@ -295,6 +295,15 @@ export default function PopupWindow() {
     };
   }, [pushHistory]);
 
+  useEffect(() => {
+    const unlisten = listen("hotkey_approve_all", () => {
+      approveAll();
+    });
+    return () => {
+      unlisten.then((u) => u()).catch(() => {});
+    };
+  }, [approveAll]);
+
   return (
     <div
       ref={containerRef}
