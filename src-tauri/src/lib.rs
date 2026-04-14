@@ -67,6 +67,7 @@ pub fn run() {
             commands::remove_session_policy,
             commands::promote_session_to_folder,
             commands::list_recent_sessions,
+            commands::set_hotkey,
         ])
         .setup(|app| {
             let show_item = CheckMenuItem::with_id(app, "show", "Show", true, false, None::<&str>)?;

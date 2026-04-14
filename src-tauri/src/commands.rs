@@ -359,3 +359,19 @@ pub struct RecentSession {
     pub last_seen_at_ms: u128,
     pub rule_kind: Option<PolicyKind>,
 }
+
+#[tauri::command]
+pub fn set_hotkey(app: tauri::AppHandle, slot: String, accel: String) -> Result<(), String> {
+    let slot_enum = crate::hotkeys::Slot::from_str_snake(&slot)
+        .ok_or_else(|| format!("unknown hotkey slot '{}'", slot))?;
+
+    crate::hotkeys::set(&app, slot_enum, &accel)?;
+
+    let mut settings = crate::app_settings::get();
+    match slot_enum {
+        crate::hotkeys::Slot::ToggleWindow => settings.hotkey_toggle_window = accel,
+        crate::hotkeys::Slot::ApproveAll => settings.hotkey_approve_all = accel,
+    }
+    crate::app_settings::set(settings);
+    Ok(())
+}
