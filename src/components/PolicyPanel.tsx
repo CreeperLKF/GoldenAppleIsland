@@ -8,6 +8,9 @@ interface Props {
   pendingCount: number;
   onCommitSessionPolicy: (kind: PolicyKind | null) => void;
   onApproveAll: () => void;
+  recentVisible: boolean;
+  recentCollapsed: boolean;
+  onToggleRecent: () => void;
 }
 
 const FORCE_LABELS = {
@@ -25,6 +28,9 @@ export default function PolicyPanel({
   pendingCount,
   onCommitSessionPolicy,
   onApproveAll,
+  recentVisible,
+  recentCollapsed,
+  onToggleRecent,
 }: Props) {
   const force = useForceOverrides();
   const current = activeSessionId ? force.get(activeSessionId) : null;
@@ -83,6 +89,29 @@ export default function PolicyPanel({
         >
           Approve all{pendingCount > 0 ? ` (${pendingCount})` : ""}
         </button>
+        {recentVisible && (
+          <button
+            type="button"
+            onClick={onToggleRecent}
+            aria-label={recentCollapsed ? "Expand Recent" : "Collapse Recent"}
+            className="rounded hover:text-[var(--text-primary)]"
+            style={{
+              width: 24,
+              height: 24,
+              flex: "0 0 auto",
+              background: "transparent",
+              border: "none",
+              color: "var(--text-secondary)",
+              fontSize: 12,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {recentCollapsed ? "▸" : "▾"}
+          </button>
+        )}
       </div>
     </div>
   );
