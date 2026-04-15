@@ -13,6 +13,7 @@ import SettingsTabs, { type TabDef } from "./SettingsTabs";
 import { useAppSettings } from "../hooks/useAppSettings";
 import type { AppSettings, SettingsTabId } from "../types/settings";
 import type { WorkingMode } from "../types/modes";
+import AuditHistoryTab from "./AuditHistoryTab";
 
 function SubsectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -141,6 +142,11 @@ export default function SettingsWindow() {
           id: "hooks",
           label: "Hook Management",
           content: <HookManagementTab settings={settings} update={update} />,
+        },
+        {
+          id: "audit",
+          label: "Audit History",
+          content: <AuditHistoryTab />,
         },
       ]
     : [];
