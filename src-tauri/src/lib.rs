@@ -1,4 +1,5 @@
 mod app_settings;
+mod audit_history;
 mod commands;
 mod file_logger;
 mod path_norm;

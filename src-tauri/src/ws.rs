@@ -193,6 +193,25 @@ async fn handle_connection(
             continue;
         }
 
+        let hook_kind = parse_hook_kind(&event.hook_type);
+
+        if let Some(kind) = hook_kind {
+            if !kind.is_blocking() {
+                // Observational: never queue for approval, emit the dedicated
+                // Tauri frontend event, and we are done with this message.
+                if let Err(e) = app.emit("hook_event_observational", event.clone()) {
+                    log::warn!("emit hook_event_observational failed: {}", e);
+                }
+                let ev_for_audit = event.clone();
+                tokio::spawn(async move {
+                    crate::audit_history::record_observational(&ev_for_audit).await;
+                });
+                continue;
+            }
+        } else {
+            log::warn!("unknown hook_type: {}", event.hook_type);
+        }
+
         let (tx, mut rx) = mpsc::channel::<HookResponse>(1);
 
         // Run policy resolution before queueing.
@@ -212,7 +231,6 @@ async fn handle_connection(
         );
 
         if resolved.kind == PolicyKind::Auto {
-            // Short-circuit: reply approve without queueing for the UI.
             pending().insert(event.id.clone(), tx);
             let resp = HookResponse {
                 r#type: "hook_response".to_string(),
@@ -224,7 +242,6 @@ async fn handle_connection(
             if let Some((_, chan)) = pending().remove(&event.id) {
                 let _ = chan.send(resp).await;
             }
-            // Emit sidecar event so the frontend can log history with an `auto` badge.
             if let Err(e) = app.emit(
                 "hook_event_auto_resolved",
                 serde_json::json!({
@@ -234,10 +251,18 @@ async fn handle_connection(
             ) {
                 log::warn!("emit hook_event_auto_resolved failed: {}", e);
             }
+            let ev_for_audit = event.clone();
+            tokio::spawn(async move {
+                crate::audit_history::record_blocking(
+                    &ev_for_audit,
+                    crate::audit_history::Decision::Approve,
+                    crate::audit_history::DecisionSource::Auto,
+                    None,
+                )
+                .await;
+            });
         } else {
             pending().insert(event.id.clone(), tx);
-            // Attach resolution so the popup can show the scope label without re-running
-            // the engine in the frontend.
             let mut enriched = event.clone();
             enriched.resolved_kind = Some(resolved.kind);
             enriched.resolved_scope = Some(resolved.scope);
@@ -320,4 +345,21 @@ fn format_notification_body(event: &HookEvent) -> String {
     let truncated: String = input_str.chars().take(120).collect();
     let suffix = if input_str.chars().count() > 120 { "..." } else { "" };
     format!("{}: {}{}", event.tool_name, truncated, suffix)
+}
+
+fn parse_hook_kind(s: &str) -> Option<crate::hook_modes::HookEventKind> {
+    use crate::hook_modes::HookEventKind as K;
+    Some(match s {
+        "pre_tool_use" => K::PreToolUse,
+        "permission_request" => K::PermissionRequest,
+        "user_prompt_submit" => K::UserPromptSubmit,
+        "post_tool_use" => K::PostToolUse,
+        "notification" => K::Notification,
+        "stop" => K::Stop,
+        "subagent_stop" => K::SubagentStop,
+        "pre_compact" => K::PreCompact,
+        "session_start" => K::SessionStart,
+        "session_end" => K::SessionEnd,
+        _ => return None,
+    })
 }
