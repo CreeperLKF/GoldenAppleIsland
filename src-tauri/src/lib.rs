@@ -8,7 +8,7 @@ mod path_norm;
 mod policy;
 mod session_ctx;
 pub mod verdict;
-mod ws;
+pub mod ws;
 mod wsl_admin;
 mod windows_hook;
 mod hook_modes;
