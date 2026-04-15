@@ -69,7 +69,7 @@ impl Default for PolicyKind {
 }
 
 impl PolicyKind {
-    pub fn is_delegating(&self) -> bool {
+    pub fn is_delegating(self) -> bool {
         matches!(self, PolicyKind::Agent | PolicyKind::External)
     }
 }

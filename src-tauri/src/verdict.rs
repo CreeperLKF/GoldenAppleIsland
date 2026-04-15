@@ -19,8 +19,8 @@ pub struct Verdict {
 pub enum VerdictParseError {
     #[error("verdict text is empty")]
     Empty,
-    #[error("verdict must be exactly a JSON object, not surrounded by prose or fences: {0}")]
-    NotStrictJson(String),
+    #[error("verdict must be exactly a JSON object, not surrounded by prose or fences")]
+    NotStrictJson,
     #[error("malformed verdict JSON: {0}")]
     MalformedJson(String),
     #[error("unknown verdict kind: {0}")]
@@ -34,21 +34,26 @@ pub fn parse_strict(s: &str) -> Result<Verdict, VerdictParseError> {
         return Err(VerdictParseError::Empty);
     }
     if !trimmed.starts_with('{') || !trimmed.ends_with('}') {
-        return Err(VerdictParseError::NotStrictJson(
-            "must start with '{' and end with '}'".to_string(),
-        ));
+        return Err(VerdictParseError::NotStrictJson);
     }
-    match serde_json::from_str::<Verdict>(trimmed) {
-        Ok(v) => Ok(v),
-        Err(e) => {
-            let msg = e.to_string();
-            if msg.contains("unknown variant") {
-                Err(VerdictParseError::UnknownKind(msg))
-            } else {
-                Err(VerdictParseError::MalformedJson(msg))
-            }
-        }
-    }
+    let value: serde_json::Value = serde_json::from_str(trimmed)
+        .map_err(|e| VerdictParseError::MalformedJson(e.to_string()))?;
+    let obj = value.as_object()
+        .ok_or_else(|| VerdictParseError::MalformedJson("expected a JSON object".to_string()))?;
+    let verdict_str = obj.get("verdict")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| VerdictParseError::MalformedJson("missing 'verdict' field".to_string()))?;
+    let verdict_kind = match verdict_str {
+        "approve" => VerdictKind::Approve,
+        "reject" => VerdictKind::Reject,
+        "escalate" => VerdictKind::Escalate,
+        other => return Err(VerdictParseError::UnknownKind(other.to_string())),
+    };
+    let reason = obj.get("reason")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    Ok(Verdict { verdict: verdict_kind, reason })
 }
 
 #[cfg(test)]
@@ -78,7 +83,7 @@ mod tests {
     fn rejects_prose_wrapped() {
         assert!(matches!(
             parse_strict("Sure! {\"verdict\":\"approve\",\"reason\":\"ok\"}"),
-            Err(VerdictParseError::NotStrictJson(_))
+            Err(VerdictParseError::NotStrictJson)
         ));
     }
 
@@ -86,7 +91,7 @@ mod tests {
     fn rejects_code_fenced() {
         assert!(matches!(
             parse_strict("```json\n{\"verdict\":\"approve\",\"reason\":\"ok\"}\n```"),
-            Err(VerdictParseError::NotStrictJson(_))
+            Err(VerdictParseError::NotStrictJson)
         ));
     }
 
@@ -107,5 +112,13 @@ mod tests {
     fn reason_defaults_to_empty_string() {
         let v = parse_strict(r#"{"verdict":"approve"}"#).unwrap();
         assert_eq!(v.reason, "");
+    }
+
+    #[test]
+    fn unknown_kind_carries_literal_string() {
+        match parse_strict(r#"{"verdict":"maybe","reason":"huh"}"#) {
+            Err(VerdictParseError::UnknownKind(s)) => assert_eq!(s, "maybe"),
+            other => panic!("expected UnknownKind(\"maybe\"), got {:?}", other),
+        }
     }
 }
