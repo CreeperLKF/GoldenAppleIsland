@@ -18,6 +18,12 @@ use crate::policy::PolicyKind;
 use crate::verdict::{Verdict, VerdictKind};
 use crate::ws::{self, HookEvent};
 
+const ACTION_APPROVE: &str = "approve";
+const ACTION_DENY: &str = "deny";
+const ACTION_ESCALATED: &str = "escalated";
+const ACTION_FAILED: &str = "failed";
+const ACTION_TAKEN_OVER: &str = "takenover";
+
 /// Called by `ws::handle_connection` when `resolved.kind` is Agent or External.
 /// Validates config; falls through to Manual enqueue on failure.
 pub async fn dispatch(app: AppHandle, event: HookEvent, kind: PolicyKind) {
@@ -185,7 +191,7 @@ async fn handle_result(
         Ok(v) => match v.verdict {
             VerdictKind::Approve => {
                 ws::send_response(event_id.clone(), "approve".to_string(), None, None).await;
-                emit_resolved(app, &event_id, "approve", source, Some(&v.reason));
+                emit_resolved(app, &event_id, ACTION_APPROVE, source, Some(&v.reason));
                 crate::audit_history::record_blocking(
                     &event,
                     crate::audit_history::Decision::Approve,
@@ -196,7 +202,7 @@ async fn handle_result(
             }
             VerdictKind::Reject => {
                 ws::send_response(event_id.clone(), "deny".to_string(), None, None).await;
-                emit_resolved(app, &event_id, "deny", source, Some(&v.reason));
+                emit_resolved(app, &event_id, ACTION_DENY, source, Some(&v.reason));
                 crate::audit_history::record_blocking(
                     &event,
                     crate::audit_history::Decision::Deny,
@@ -208,13 +214,13 @@ async fn handle_result(
             VerdictKind::Escalate => {
                 let banner = format!("{} escalated: {}", capitalize(source), v.reason);
                 escalate_to_manual(app, event, &banner).await;
-                emit_resolved(app, &event_id, "escalated", source, Some(&v.reason));
+                emit_resolved(app, &event_id, ACTION_ESCALATED, source, Some(&v.reason));
             }
         },
         Err(msg) => {
             let banner = format!("{} call failed: {}", capitalize(source), short(&msg));
             escalate_to_manual(app, event, &banner).await;
-            emit_resolved(app, &event_id, "failed", source, Some(&msg));
+            emit_resolved(app, &event_id, ACTION_FAILED, source, Some(&msg));
         }
     }
 }
@@ -300,6 +306,6 @@ pub async fn take_over(app: AppHandle, event_id: String) -> Result<(), String> {
     enriched.delegation_banner = Some(banner);
     ws::enqueue_event_as_manual(&app, enriched);
 
-    emit_resolved(&app, &event_id, "takenover", source, None);
+    emit_resolved(&app, &event_id, ACTION_TAKEN_OVER, source, None);
     Ok(())
 }
