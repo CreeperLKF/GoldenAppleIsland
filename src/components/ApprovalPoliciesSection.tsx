@@ -5,6 +5,7 @@ import { useExternalConfig } from "../hooks/useExternalConfig";
 import PolicyDropdown, { DropdownValue } from "./ui/PolicyDropdown";
 import { resolvePolicy } from "../lib/resolvePolicy";
 import ResolverPanel from "./ResolverPanel";
+import AgentApproveSection from "./AgentApproveSection";
 import type { PolicyKind, RecentSession } from "../types/events";
 
 const SIMPLE_LABELS = { auto: "Auto", manual: "Manual" };
@@ -81,6 +82,7 @@ export default function ApprovalPoliciesSection() {
   };
 
   return (
+    <>
     <section style={{ padding: "8px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
       <ResolverPanel policies={policies} recent={recent} />
       <div className="font-semibold text-[var(--text-primary)]" style={{ fontSize: 12 }}>
@@ -338,5 +340,7 @@ export default function ApprovalPoliciesSection() {
         ))}
       </div>
     </section>
+    <AgentApproveSection />
+    </>
   );
 }
