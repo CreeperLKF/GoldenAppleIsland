@@ -1,7 +1,18 @@
+// --- imports ---
+// std
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
+use std::time::Duration;
 
+// external crates
 use serde::{Deserialize, Serialize};
+use tokio::process::Command;
+use tokio::sync::Mutex as AsyncMutex;
+
+// crate-internal
+use crate::verdict::{self, Verdict, VerdictParseError};
+use crate::ws::HookEvent;
 
 pub const ALICE_URL: &str =
     "https://raw.githubusercontent.com/CreeperLKF/ALICE/main/examples/all-is-well.md";
@@ -75,8 +86,6 @@ pub fn nuke_default_workspace(dir: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-use crate::ws::HookEvent;
-
 /// Render the hook event as a neutral YAML-ish prompt block fed to `claude -p`.
 pub fn build_prompt(event: &HookEvent) -> String {
     let mut out = String::new();
@@ -99,8 +108,6 @@ required JSON verdict.\n\n",
     out.push_str(&format!("  timestamp: {}\n", event.timestamp));
     out
 }
-
-use std::sync::{Mutex, OnceLock};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentSessionSnapshot {
@@ -198,12 +205,6 @@ pub(crate) fn record_turn_with_workspace(session_id: &str, workspace_path: PathB
     }
 }
 
-use std::time::Duration;
-use tokio::process::Command;
-use tokio::sync::Mutex as AsyncMutex;
-
-use crate::verdict::{self, Verdict, VerdictParseError};
-
 /// Global mutex serializing every agent call. Required because `--resume`
 /// cannot tolerate concurrent writers on the same session_id.
 static AGENT_MUTEX: OnceLock<AsyncMutex<()>> = OnceLock::new();
@@ -238,7 +239,7 @@ struct ClaudeEnvelope {
     session_id: Option<String>,
     #[serde(default)]
     result: Option<String>,
-    #[serde(default, rename = "is_error")]
+    #[serde(default)]
     is_error: bool,
     #[serde(default)]
     error: Option<String>,
@@ -318,7 +319,7 @@ pub async fn run_agent_call(
         clear_session();
         return Err(AgentCallError::NonZeroExit(
             output.status.code().unwrap_or(-1),
-            stderr.chars().take(400).collect::<String>(),
+            stderr.chars().take(2000).collect::<String>(),
         ));
     }
 
