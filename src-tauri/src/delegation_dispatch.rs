@@ -78,6 +78,7 @@ async fn spawn_agent(
         kind,
         cancel_tx,
         started_at: SystemTime::now(),
+        event: event.clone(),
     };
     delegation::insert(event.id.clone(), handle);
 
@@ -122,6 +123,7 @@ async fn spawn_external(
         kind,
         cancel_tx,
         started_at: SystemTime::now(),
+        event: event.clone(),
     };
     delegation::insert(event.id.clone(), handle);
 
@@ -157,6 +159,15 @@ async fn handle_result(
     result: Result<Verdict, String>,
     source: &str,
 ) {
+    // Arbitration: if take_over already removed this entry, it owns the
+    // outcome. We must not call send_response (the bridge tx is still alive
+    // and the re-queued manual card will serve the user's decision) and
+    // must not emit any resolved/failed events.
+    if delegation::remove(&event.id).is_none() {
+        log::info!("handle_result: {} already taken over, skipping", event.id);
+        return;
+    }
+
     let event_id = event.id.clone();
     match result {
         Ok(v) => match v.verdict {
@@ -194,7 +205,6 @@ async fn handle_result(
             emit_resolved(app, &event_id, "failed", source, Some(&msg));
         }
     }
-    delegation::remove(&event_id);
 }
 
 async fn fallthrough_manual(app: &AppHandle, event: HookEvent, reason: &str) {
@@ -263,25 +273,17 @@ pub async fn take_over(app: AppHandle, event_id: String) -> Result<(), String> {
     let handle = delegation::remove(&event_id)
         .ok_or_else(|| format!("no delegation in flight for {}", event_id))?;
 
-    // Drop the sender — the spawned task's select! arm fires, the task
-    // returns, and the Drop guard on any spawned claude child kills it.
+    // Fire cancellation. If the task was already past its `select!`, the
+    // arbitration in handle_result (via the remove above) is what stops it
+    // from writing a response.
     drop(handle.cancel_tx);
-
-    // We need the original event; fetch it from the ws queue snapshot.
-    // ws::handle_connection inserted the event into queue() before calling
-    // dispatch, so it is still present until send_response removes it.
-    let snapshot = ws::snapshot_queue();
-    let ev = snapshot
-        .into_iter()
-        .find(|e| e.id == event_id)
-        .ok_or_else(|| format!("no queued event for {}", event_id))?;
 
     let (banner, source) = match handle.kind {
         DelegationKind::Agent => ("Taken over from Agent".to_string(), "agent"),
         DelegationKind::External => ("Taken over from External".to_string(), "external"),
     };
 
-    let mut enriched = ev;
+    let mut enriched = handle.event;
     enriched.resolved_kind = Some(PolicyKind::Manual);
     enriched.delegation_banner = Some(banner);
     ws::enqueue_event_as_manual(&app, enriched);

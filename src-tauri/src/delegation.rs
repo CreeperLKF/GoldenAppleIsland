@@ -24,6 +24,7 @@ pub struct DelegationHandle {
     pub kind: DelegationKind,
     pub cancel_tx: oneshot::Sender<()>,
     pub started_at: SystemTime,
+    pub event: crate::ws::HookEvent,
 }
 
 #[derive(Debug, Clone, Serialize)]
