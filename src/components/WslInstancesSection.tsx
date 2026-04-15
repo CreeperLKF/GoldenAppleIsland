@@ -8,7 +8,7 @@ import HookModeDropdown from "./HookModeDropdown";
 export default function WslInstancesSection() {
   const { distros, loading, error, busy, updating, refresh, checkDistro, setEnabled, setAll, updateScripts, setConfig } =
     useWslDistros();
-  const { settings } = useAppSettings();
+  const { settings, update: updateSettings } = useAppSettings();
 
   return (
     <section className="flex flex-col" style={{ padding: "12px 16px", gap: 10 }}>
@@ -116,7 +116,10 @@ export default function WslInstancesSection() {
               mode: settings?.default_mode ?? "audit",
               custom: EMPTY_CUSTOM,
             }}
-            onConfigChange={(next: HookTargetConfig) => setConfig(d.name, next)}
+            onConfigChange={async (next: HookTargetConfig) => {
+              await setConfig(d.name, next);
+              await updateSettings({});
+            }}
             busy={busy.has(d.name)}
             onToggle={(next) => setEnabled(d.name, next)}
             onCheck={() => checkDistro(d.name)}

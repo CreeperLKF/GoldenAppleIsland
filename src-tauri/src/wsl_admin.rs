@@ -76,6 +76,12 @@ fn decode_wsl_output(bytes: &[u8]) -> String {
 fn wsl_cmd() -> Command {
     let mut cmd = Command::new("wsl.exe");
     cmd.env("WSL_UTF8", "1");
+    #[cfg(windows)]
+    {
+        // Prevent a console window from flashing when the Tauri GUI spawns wsl.exe.
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
     cmd
 }
 
