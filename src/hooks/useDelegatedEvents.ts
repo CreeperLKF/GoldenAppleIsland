@@ -16,7 +16,7 @@ export interface DelegatedState {
   tool_name: string;
   session_cwd: string;
   source_distro: string;
-  tool_input: Record<string, unknown> | null;
+  tool_input: unknown;
 }
 
 export function useDelegatedEvents() {

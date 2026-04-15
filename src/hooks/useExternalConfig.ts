@@ -43,7 +43,7 @@ export function useExternalConfig() {
 
   const setEndpointUrl = useCallback(
     async (url: string | null) => {
-      if (url === null) {
+      if (url === null || url === "") {
         await invoke("set_external_config", { patch: { clear_endpoint: true } });
       } else {
         await invoke("set_external_config", { patch: { endpoint_url: url } });
