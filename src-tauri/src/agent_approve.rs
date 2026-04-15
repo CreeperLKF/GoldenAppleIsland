@@ -123,6 +123,82 @@ fn render_tool_input(out: &mut String, value: &serde_json::Value, indent: usize)
     }
 }
 
+use std::sync::{Mutex, OnceLock};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentSessionSnapshot {
+    pub session_id: String,
+    pub turn_count: u32,
+    pub workspace_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+struct AgentSessionState {
+    session_id: String,
+    turn_count: u32,
+    workspace_path: PathBuf,
+}
+
+static SESSION: OnceLock<Mutex<Option<AgentSessionState>>> = OnceLock::new();
+
+fn cell() -> &'static Mutex<Option<AgentSessionState>> {
+    SESSION.get_or_init(|| Mutex::new(None))
+}
+
+pub fn snapshot_session() -> Option<AgentSessionSnapshot> {
+    let guard = cell().lock().unwrap();
+    guard.as_ref().map(|s| AgentSessionSnapshot {
+        session_id: s.session_id.clone(),
+        turn_count: s.turn_count,
+        workspace_path: s.workspace_path.clone(),
+    })
+}
+
+pub fn clear_session() {
+    let mut guard = cell().lock().unwrap();
+    *guard = None;
+}
+
+/// Returns true if the next call must start fresh (omit `--resume`) because
+/// the current session has already reached `turn_limit`.
+pub fn should_rollover_before_next_call(turn_limit: u32) -> bool {
+    let guard = cell().lock().unwrap();
+    match guard.as_ref() {
+        None => false,
+        Some(s) => s.turn_count >= turn_limit,
+    }
+}
+
+/// Record a completed call. Called by the caller after `run_agent_call` parses
+/// a verdict successfully. Starts a new session if `session_id` differs from
+/// the current one, otherwise increments turn count.
+pub fn record_turn_with_workspace(session_id: &str, workspace_path: PathBuf) {
+    let mut guard = cell().lock().unwrap();
+    match guard.as_mut() {
+        Some(s) if s.session_id == session_id => {
+            s.turn_count += 1;
+            s.workspace_path = workspace_path;
+        }
+        _ => {
+            *guard = Some(AgentSessionState {
+                session_id: session_id.to_string(),
+                turn_count: 1,
+                workspace_path,
+            });
+        }
+    }
+}
+
+#[cfg(test)]
+pub(crate) fn record_turn(session_id: &str) {
+    record_turn_with_workspace(session_id, PathBuf::from("."));
+}
+
+#[cfg(test)]
+pub(crate) fn reset_session_for_test() {
+    clear_session();
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,5 +299,29 @@ mod tests {
         assert!(prompt.contains("file_path: src/x.ts"));
         assert!(prompt.contains("content: |"));
         assert!(prompt.contains("line1"));
+    }
+
+    #[test]
+    fn agent_session_cycles_at_turn_limit() {
+        reset_session_for_test();
+        record_turn("sess_aaa");
+        record_turn("sess_aaa");
+        record_turn("sess_aaa");
+        let snap = snapshot_session().unwrap();
+        assert_eq!(snap.session_id, "sess_aaa");
+        assert_eq!(snap.turn_count, 3);
+
+        // turn limit 3 → next recorded turn means "rolled over"
+        assert!(should_rollover_before_next_call(3));
+        // turn limit 10 → not yet
+        assert!(!should_rollover_before_next_call(10));
+    }
+
+    #[test]
+    fn reset_session_clears_state() {
+        reset_session_for_test();
+        record_turn("sess_x");
+        clear_session();
+        assert!(snapshot_session().is_none());
     }
 }
