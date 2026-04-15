@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use std::sync::{OnceLock, RwLock};
 
 use serde::{Deserialize, Serialize};
+
+use crate::hook_modes::{HookTargetConfig, WorkingMode};
 use crate::policy::ApprovalPolicies;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,6 +59,18 @@ pub struct AppSettings {
     pub hotkey_toggle_window: String,
     #[serde(default = "default_hotkey_approve_all")]
     pub hotkey_approve_all: String,
+    #[serde(default)]
+    pub default_mode: WorkingMode,
+    #[serde(default)]
+    pub windows_hook_config: HookTargetConfig,
+    #[serde(default)]
+    pub wsl_hook_configs: HashMap<String, HookTargetConfig>,
+    #[serde(default)]
+    pub audit_history_enabled: bool,
+    #[serde(default = "default_max_dynamic_sessions")]
+    pub max_dynamic_sessions: u32,
+    #[serde(default)]
+    pub audit_skip_unpinned_delete_confirm: bool,
 }
 
 fn default_hotkey_toggle_window() -> String {
@@ -65,6 +79,10 @@ fn default_hotkey_toggle_window() -> String {
 
 fn default_hotkey_approve_all() -> String {
     "Super+Shift+KeyA".to_string()
+}
+
+fn default_max_dynamic_sessions() -> u32 {
+    50
 }
 
 fn default_true() -> bool {
@@ -88,6 +106,12 @@ impl Default for AppSettings {
             recent_collapsed: false,
             hotkey_toggle_window: String::new(),
             hotkey_approve_all: "Super+Shift+KeyA".to_string(),
+            default_mode: WorkingMode::default(),
+            windows_hook_config: HookTargetConfig::default(),
+            wsl_hook_configs: HashMap::new(),
+            audit_history_enabled: false,
+            max_dynamic_sessions: 50,
+            audit_skip_unpinned_delete_confirm: false,
         }
     }
 }
