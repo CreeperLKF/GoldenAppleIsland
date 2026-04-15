@@ -145,3 +145,72 @@ pub fn resolve(config: &HookTargetConfig) -> HashSet<HookEventKind> {
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cfg(mode: WorkingMode) -> HookTargetConfig {
+        HookTargetConfig { mode, custom: CustomHookSet::default() }
+    }
+
+    #[test]
+    fn control_is_permission_request_only() {
+        let set = resolve(&cfg(WorkingMode::Control));
+        assert_eq!(set.len(), 1);
+        assert!(set.contains(&HookEventKind::PermissionRequest));
+    }
+
+    #[test]
+    fn audit_adds_pre_tool_use_on_top_of_control() {
+        let set = resolve(&cfg(WorkingMode::Audit));
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&HookEventKind::PreToolUse));
+        assert!(set.contains(&HookEventKind::PermissionRequest));
+    }
+
+    #[test]
+    fn observe_covers_all_ten_events() {
+        let set = resolve(&cfg(WorkingMode::Observe));
+        assert_eq!(set.len(), 10);
+        for k in HookEventKind::ALL {
+            assert!(set.contains(&k), "missing {:?}", k);
+        }
+    }
+
+    #[test]
+    fn control_is_subset_of_audit_subset_of_observe() {
+        let c = resolve(&cfg(WorkingMode::Control));
+        let a = resolve(&cfg(WorkingMode::Audit));
+        let o = resolve(&cfg(WorkingMode::Observe));
+        assert!(c.is_subset(&a));
+        assert!(a.is_subset(&o));
+    }
+
+    #[test]
+    fn custom_mode_honors_checked_fields_verbatim() {
+        let mut custom = CustomHookSet::default();
+        custom.user_prompt_submit = true;
+        custom.stop = true;
+        let set = resolve(&HookTargetConfig { mode: WorkingMode::Custom, custom });
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&HookEventKind::UserPromptSubmit));
+        assert!(set.contains(&HookEventKind::Stop));
+    }
+
+    #[test]
+    fn custom_mode_empty_produces_empty_set() {
+        let set = resolve(&cfg(WorkingMode::Custom));
+        assert!(set.is_empty());
+    }
+
+    #[test]
+    fn blocking_classification() {
+        assert!(HookEventKind::PreToolUse.is_blocking());
+        assert!(HookEventKind::PermissionRequest.is_blocking());
+        assert!(HookEventKind::UserPromptSubmit.is_blocking());
+        assert!(!HookEventKind::PostToolUse.is_blocking());
+        assert!(!HookEventKind::Notification.is_blocking());
+        assert!(!HookEventKind::SessionEnd.is_blocking());
+    }
+}
