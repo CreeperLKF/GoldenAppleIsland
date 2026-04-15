@@ -186,8 +186,9 @@ pub fn get_windows_hook_status() -> crate::wsl_admin::HookStatus {
 
 #[tauri::command]
 pub fn set_windows_hook_enabled(enabled: bool) -> Result<(), String> {
+    let config = app_settings::get().windows_hook_config;
     if enabled {
-        crate::windows_hook::enable()
+        crate::windows_hook::enable(&config)
     } else {
         crate::windows_hook::disable()
     }

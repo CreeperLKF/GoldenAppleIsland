@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 
@@ -5,13 +6,31 @@ use regex::Regex;
 use serde_json::{json, Value};
 
 use crate::app_settings::{self, CachedHookStatus};
+use crate::hook_modes::{HookEventKind, HookTargetConfig};
+use crate::hook_reconcile::{apply_desired_set, command_for, HookTarget};
 use crate::wsl_admin::HookStatus;
 
-const WIN_HOOK_COMMAND: &str = "~/.claude/hooks/pre-tool-use.cmd";
-const WIN_PERM_HOOK_COMMAND: &str = "~/.claude/hooks/permission-request.cmd";
-const PRE_TOOL_USE_CMD: &str = include_str!("../../wsl/pre-tool-use.cmd");
-const PERMISSION_REQUEST_CMD: &str = include_str!("../../wsl/permission-request.cmd");
 const BRIDGE_MJS: &str = include_str!("../../wsl/bridge.mjs");
+
+struct ScriptAsset {
+    basename: &'static str,
+    content: &'static str,
+}
+
+/// Every `.cmd` wrapper, keyed to its event basename. Installed unconditionally
+/// on `enable()` so that mode changes never need to touch disk scripts again.
+const WINDOWS_SCRIPTS: &[ScriptAsset] = &[
+    ScriptAsset { basename: "pre-tool-use",       content: include_str!("../../wsl/pre-tool-use.cmd") },
+    ScriptAsset { basename: "permission-request", content: include_str!("../../wsl/permission-request.cmd") },
+    ScriptAsset { basename: "user-prompt-submit", content: include_str!("../../wsl/user-prompt-submit.cmd") },
+    ScriptAsset { basename: "post-tool-use",      content: include_str!("../../wsl/post-tool-use.cmd") },
+    ScriptAsset { basename: "notification",       content: include_str!("../../wsl/notification.cmd") },
+    ScriptAsset { basename: "stop",               content: include_str!("../../wsl/stop.cmd") },
+    ScriptAsset { basename: "subagent-stop",      content: include_str!("../../wsl/subagent-stop.cmd") },
+    ScriptAsset { basename: "pre-compact",        content: include_str!("../../wsl/pre-compact.cmd") },
+    ScriptAsset { basename: "session-start",      content: include_str!("../../wsl/session-start.cmd") },
+    ScriptAsset { basename: "session-end",        content: include_str!("../../wsl/session-end.cmd") },
+];
 
 fn hooks_dir() -> Option<PathBuf> {
     dirs::home_dir().map(|h| h.join(".claude").join("hooks"))
@@ -23,81 +42,97 @@ fn settings_path() -> Option<PathBuf> {
 
 pub fn get_status() -> HookStatus {
     let Some(dir) = hooks_dir() else {
-        return HookStatus {
-            scripts_installed: false,
-            registered: false,
-        };
+        return HookStatus { scripts_installed: false, registered: false };
     };
-    let scripts_installed = dir.join("pre-tool-use.cmd").exists()
-        && dir.join("permission-request.cmd").exists()
+    let scripts_installed = WINDOWS_SCRIPTS
+        .iter()
+        .all(|s| dir.join(format!("{}.cmd", s.basename)).exists())
         && dir.join("bridge.mjs").exists();
 
     let registered = match settings_path().and_then(|p| fs::read_to_string(p).ok()) {
         Some(s) => match serde_json::from_str::<Value>(&s) {
-            Ok(v) => has_hook_entry(&v),
+            Ok(v) => any_managed_hook_present(&v),
             Err(_) => false,
         },
         None => false,
     };
 
-    HookStatus {
-        scripts_installed,
-        registered,
-    }
+    HookStatus { scripts_installed, registered }
 }
 
-pub fn enable() -> Result<(), String> {
+fn any_managed_hook_present(settings: &Value) -> bool {
+    let Some(hooks) = settings.get("hooks").and_then(|h| h.as_object()) else {
+        return false;
+    };
+    for arr in hooks.values() {
+        let Some(arr) = arr.as_array() else { continue };
+        for group in arr {
+            let Some(inner) = group.get("hooks").and_then(|v| v.as_array()) else { continue };
+            for hook in inner {
+                if let Some(cmd) = hook.get("command").and_then(|c| c.as_str()) {
+                    if cmd.starts_with("~/.claude/hooks/") && cmd.ends_with(".cmd") {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
+pub fn enable(config: &HookTargetConfig) -> Result<(), String> {
+    install_scripts()?;
+    let desired = crate::hook_modes::resolve(config);
+    reconcile_settings_json(&desired)?;
+    update_cache(&get_status());
+    Ok(())
+}
+
+pub fn disable() -> Result<(), String> {
+    let desired: HashSet<HookEventKind> = HashSet::new();
+    reconcile_settings_json(&desired)?;
+    update_cache(&get_status());
+    Ok(())
+}
+
+pub fn apply_config(config: &HookTargetConfig) -> Result<(), String> {
+    // Called when the user changes mode on an already-enabled target. Make
+    // sure scripts are installed (cheap / idempotent) and re-reconcile.
+    install_scripts()?;
+    let desired = crate::hook_modes::resolve(config);
+    reconcile_settings_json(&desired)?;
+    update_cache(&get_status());
+    Ok(())
+}
+
+fn install_scripts() -> Result<(), String> {
     let dir = hooks_dir().ok_or("cannot determine home directory")?;
     fs::create_dir_all(&dir).map_err(|e| format!("mkdir hooks: {}", e))?;
-
-    fs::write(dir.join("pre-tool-use.cmd"), PRE_TOOL_USE_CMD)
-        .map_err(|e| format!("write pre-tool-use.cmd: {}", e))?;
-    fs::write(dir.join("permission-request.cmd"), PERMISSION_REQUEST_CMD)
-        .map_err(|e| format!("write permission-request.cmd: {}", e))?;
+    for s in WINDOWS_SCRIPTS {
+        fs::write(dir.join(format!("{}.cmd", s.basename)), s.content)
+            .map_err(|e| format!("write {}.cmd: {}", s.basename, e))?;
+    }
     fs::write(dir.join("bridge.mjs"), BRIDGE_MJS)
         .map_err(|e| format!("write bridge.mjs: {}", e))?;
-
     let configured_port = app_settings::get().port;
     update_script_port(configured_port)?;
+    Ok(())
+}
 
+fn reconcile_settings_json(desired: &HashSet<HookEventKind>) -> Result<(), String> {
     let settings_file = settings_path().ok_or("cannot determine home directory")?;
     let mut settings = if let Ok(s) = fs::read_to_string(&settings_file) {
         serde_json::from_str::<Value>(&s).unwrap_or_else(|_| json!({}))
     } else {
         json!({})
     };
-
-    add_hook_entry(&mut settings);
-
+    apply_desired_set(&mut settings, HookTarget::Windows, desired);
     let json = serde_json::to_string_pretty(&settings)
         .map_err(|e| format!("serialize: {}", e))?;
     if let Some(parent) = settings_file.parent() {
         fs::create_dir_all(parent).map_err(|e| format!("mkdir settings: {}", e))?;
     }
     fs::write(&settings_file, json).map_err(|e| format!("write settings: {}", e))?;
-
-    update_cache(&get_status());
-    Ok(())
-}
-
-pub fn disable() -> Result<(), String> {
-    let settings_file = match settings_path() {
-        Some(p) if p.exists() => p,
-        _ => return Ok(()),
-    };
-
-    let content = fs::read_to_string(&settings_file)
-        .map_err(|e| format!("read settings: {}", e))?;
-    let mut settings: Value =
-        serde_json::from_str(&content).map_err(|e| format!("parse settings: {}", e))?;
-
-    remove_hook_entry(&mut settings);
-
-    let json = serde_json::to_string_pretty(&settings)
-        .map_err(|e| format!("serialize: {}", e))?;
-    fs::write(&settings_file, json).map_err(|e| format!("write settings: {}", e))?;
-
-    update_cache(&get_status());
     Ok(())
 }
 
@@ -133,102 +168,9 @@ fn update_cache(status: &HookStatus) {
     app_settings::set(settings);
 }
 
-fn has_hook_entry(settings: &Value) -> bool {
-    has_hook_for_event(settings, "PreToolUse", WIN_HOOK_COMMAND)
-        && has_hook_for_event(settings, "PermissionRequest", WIN_PERM_HOOK_COMMAND)
-}
-
-fn has_hook_for_event(settings: &Value, event_name: &str, command: &str) -> bool {
-    let Some(groups) = settings
-        .get("hooks")
-        .and_then(|h| h.get(event_name))
-        .and_then(|v| v.as_array())
-    else {
-        return false;
-    };
-    for group in groups {
-        let Some(hooks) = group.get("hooks").and_then(|v| v.as_array()) else {
-            continue;
-        };
-        for hook in hooks {
-            if hook.get("command").and_then(|c| c.as_str()) == Some(command) {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-fn add_hook_entry(settings: &mut Value) {
-    add_hook_for_event(settings, "PreToolUse", WIN_HOOK_COMMAND, None);
-    add_hook_for_event(settings, "PermissionRequest", WIN_PERM_HOOK_COMMAND, Some(86400));
-}
-
-fn add_hook_for_event(settings: &mut Value, event_name: &str, command: &str, timeout: Option<u64>) {
-    if !settings.is_object() {
-        *settings = json!({});
-    }
-    let obj = settings.as_object_mut().unwrap();
-    let hooks_entry = obj.entry("hooks").or_insert_with(|| json!({}));
-    if !hooks_entry.is_object() {
-        *hooks_entry = json!({});
-    }
-    let hooks = hooks_entry.as_object_mut().unwrap();
-    let entry = hooks
-        .entry(event_name)
-        .or_insert_with(|| Value::Array(vec![]));
-    if !entry.is_array() {
-        *entry = Value::Array(vec![]);
-    }
-    let arr = entry.as_array_mut().unwrap();
-
-    for group in arr.iter() {
-        if let Some(inner) = group.get("hooks").and_then(|v| v.as_array()) {
-            for hook in inner {
-                if hook.get("command").and_then(|c| c.as_str()) == Some(command) {
-                    return;
-                }
-            }
-        }
-    }
-
-    let mut hook_obj = json!({ "type": "command", "command": command });
-    if let Some(t) = timeout {
-        hook_obj.as_object_mut().unwrap().insert("timeout".to_string(), json!(t));
-    }
-
-    arr.push(json!({
-        "matcher": "*",
-        "hooks": [hook_obj]
-    }));
-}
-
-fn remove_hook_entry(settings: &mut Value) {
-    remove_hook_for_event(settings, "PreToolUse", WIN_HOOK_COMMAND);
-    remove_hook_for_event(settings, "PermissionRequest", WIN_PERM_HOOK_COMMAND);
-}
-
-fn remove_hook_for_event(settings: &mut Value, event_name: &str, command: &str) {
-    let Some(arr) = settings
-        .get_mut("hooks")
-        .and_then(|h| h.get_mut(event_name))
-        .and_then(|v| v.as_array_mut())
-    else {
-        return;
-    };
-
-    for group in arr.iter_mut() {
-        if let Some(inner) = group.get_mut("hooks").and_then(|v| v.as_array_mut()) {
-            inner.retain(|hook| {
-                hook.get("command").and_then(|c| c.as_str()) != Some(command)
-            });
-        }
-    }
-    arr.retain(|group| {
-        group
-            .get("hooks")
-            .and_then(|v| v.as_array())
-            .map(|a| !a.is_empty())
-            .unwrap_or(false)
-    });
+// `command_for` is re-exported for tests that want the canonical command
+// string; silences unused-import warning if no call site in this module.
+#[allow(dead_code)]
+fn _refer_command_for(t: HookTarget, k: HookEventKind) -> String {
+    command_for(t, k)
 }
