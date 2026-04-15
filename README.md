@@ -44,6 +44,12 @@ The setup.exe lands in `src-tauri/target/release/bundle/nsis/`. Run it, launch t
 
 Prerequisites: Node 20+, Rust via `rustup`, and the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for Windows (MSVC build tools + WebView2).
 
+### Optional: Agent Approve (experimental)
+
+The **Agent Approve** policy kind delegates approval decisions to a locally-running Claude Code agent guided by a workspace `CLAUDE.md`. Using it requires the Claude Code CLI on your Windows `PATH` — install it from <https://claude.com/claude-code>. Golden Apple Island does not bundle or install Claude Code; both `claude.exe` and the npm-installed `claude.cmd` shim are supported (resolved via `which`).
+
+When Agent Approve is enabled for a rule, Golden Apple Island spawns `claude -p` against a small workspace (default: `%APPDATA%\golden-apple-island\agent-workspaces\default\`, pre-populated with the ALICE "all-is-well" profile downloaded on first use) and waits for a JSON verdict before responding to the hook event. Configure it under **Settings → Approval Policies → Agent Approve (experimental)**.
+
 ## Develop
 
 ```bash
