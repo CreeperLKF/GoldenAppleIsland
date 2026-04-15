@@ -210,9 +210,9 @@ pub enum AgentCallError {
     WorkspaceMissing(String),
     #[error("CLAUDE.md missing at {0}")]
     ClaudeMdMissing(String),
-    #[error("failed to spawn claude.exe: {0}")]
+    #[error("failed to spawn claude binary: {0}")]
     SpawnFailed(String),
-    #[error("claude.exe exited with status {0}: {1}")]
+    #[error("claude binary exited with status {0}: {1}")]
     NonZeroExit(i32, String),
     #[error("agent call timed out after {0}s")]
     Timeout(u32),
@@ -235,8 +235,19 @@ struct ClaudeEnvelope {
     error: Option<String>,
 }
 
-/// Spawn `claude.exe` with the stored session_id (or start fresh), parse the
-/// envelope, extract the verdict. Caller holds no locks on the agent mutex.
+fn resolve_claude_binary() -> Result<std::path::PathBuf, AgentCallError> {
+    // Windows CreateProcess does not honor PATHEXT, so we must resolve
+    // claude.cmd / claude.exe / claude.bat ourselves before spawning.
+    which::which("claude").map_err(|e| {
+        AgentCallError::SpawnFailed(format!(
+            "claude binary not found on PATH (looked for claude.exe/.cmd/.bat): {}",
+            e
+        ))
+    })
+}
+
+/// Spawn the resolved `claude` binary with the stored session_id (or start fresh),
+/// parse the envelope, extract the verdict. Caller holds no locks on the agent mutex.
 pub async fn run_agent_call(
     prompt: &str,
     workspace: &Path,
@@ -263,7 +274,8 @@ pub async fn run_agent_call(
     }
     let resume_id = snapshot_session().map(|s| s.session_id);
 
-    let mut cmd = Command::new("claude.exe");
+    let claude_path = resolve_claude_binary()?;
+    let mut cmd = Command::new(&claude_path);
     cmd.arg("-p")
         .arg(prompt)
         .arg("--output-format")
@@ -282,7 +294,13 @@ pub async fn run_agent_call(
     let output = tokio::time::timeout(Duration::from_secs(call_timeout_secs as u64), child_future)
         .await
         .map_err(|_| AgentCallError::Timeout(call_timeout_secs))?
-        .map_err(|e| AgentCallError::SpawnFailed(e.to_string()))?;
+        .map_err(|e| {
+            AgentCallError::SpawnFailed(format!(
+                "failed to spawn resolved claude binary at {}: {}",
+                claude_path.display(),
+                e
+            ))
+        })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();

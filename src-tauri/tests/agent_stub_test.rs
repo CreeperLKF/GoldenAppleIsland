@@ -14,7 +14,15 @@ use golden_apple_island_lib::agent_approve::{self, AgentCallError};
 use golden_apple_island_lib::verdict::VerdictKind;
 use tempfile::TempDir;
 
-// Serializes mutation of global PATH + global AGENT_MUTEX across tests.
+// SAFETY: PATH mutation via std::env::set_var is process-global and not
+// thread-safe. This lock is FILE-LOCAL — it only serializes tests within
+// this single integration test binary. Any future test file (another
+// tests/*.rs) that also mutates environment variables concurrently with
+// this one will race regardless of this lock, because each integration
+// test file compiles into its own binary but `cargo test` runs tests
+// across binaries in parallel within a single process only when
+// `--test-threads` permits. Use `--test-threads=1` if adding another
+// env-mutating test file, or refactor to a shared lock.
 static TEST_LOCK: Mutex<()> = Mutex::new(());
 
 /// Compile a tiny Rust stub into `<dir>/claude.exe` that prints a fixed JSON
