@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useApprovalPolicies } from "../hooks/useApprovalPolicies";
+import { useAgentConfig } from "../hooks/useAgentConfig";
+import { useExternalConfig } from "../hooks/useExternalConfig";
 import PolicyDropdown, { DropdownValue } from "./ui/PolicyDropdown";
 import { resolvePolicy } from "../lib/resolvePolicy";
 import ResolverPanel from "./ResolverPanel";
@@ -28,6 +30,22 @@ export default function ApprovalPoliciesSection() {
     removeSession,
     promoteSession,
   } = useApprovalPolicies();
+  const { config: agentCfg } = useAgentConfig();
+  const { config: externalCfg } = useExternalConfig();
+  const agentConfigured = agentCfg?.workspace_path != null;
+  const externalConfigured = externalCfg?.endpoint_url != null;
+
+  const onRequestConfigure = (which: "agent" | "external") => {
+    const id =
+      which === "agent" ? "agent-approve-section" : "external-approve-section";
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const dropdownExtra = {
+    agentConfigured,
+    externalConfigured,
+    onRequestConfigure,
+  };
 
   const distroEntries = useMemo(
     () => Object.entries(policies.per_distro),
@@ -80,6 +98,7 @@ export default function ApprovalPoliciesSection() {
           onChange={onChangeGlobal}
           labels={SIMPLE_LABELS}
           ariaLabel="Global approval policy"
+          {...dropdownExtra}
         />
       </div>
 
@@ -101,6 +120,7 @@ export default function ApprovalPoliciesSection() {
               allowInherit={false}
               onChange={(v) => v !== "inherit" && setDistro(distro, v)}
               labels={SIMPLE_LABELS}
+              {...dropdownExtra}
             />
             <button
               type="button"
@@ -161,6 +181,7 @@ export default function ApprovalPoliciesSection() {
                 v !== "inherit" && setFolder(path, v, rule.include_subdirectories)
               }
               labels={SIMPLE_LABELS}
+              {...dropdownExtra}
             />
             <label style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
               <input
@@ -210,6 +231,7 @@ export default function ApprovalPoliciesSection() {
             allowInherit={false}
             onChange={(v) => v !== "inherit" && setNewFolderKind(v)}
             labels={SIMPLE_LABELS}
+            {...dropdownExtra}
           />
           <button
             type="button"
@@ -277,6 +299,7 @@ export default function ApprovalPoliciesSection() {
                     setSession(s.session_id, v);
                   }
                 }}
+                {...dropdownExtra}
               />
               {s.rule_kind !== null && (
                 <button

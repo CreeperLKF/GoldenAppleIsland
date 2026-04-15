@@ -1,7 +1,10 @@
+import { invoke } from "@tauri-apps/api/core";
 import type { PolicyKind } from "../types/events";
 import PolicyDropdown, { DropdownValue } from "./ui/PolicyDropdown";
 import PolicySplitButton from "./ui/PolicySplitButton";
 import { useForceOverrides } from "../hooks/useForceOverrides";
+import { useAgentConfig } from "../hooks/useAgentConfig";
+import { useExternalConfig } from "../hooks/useExternalConfig";
 
 interface Props {
   activeSessionId: string | null;
@@ -34,6 +37,14 @@ export default function PolicyPanel({
 }: Props) {
   const force = useForceOverrides();
   const current = activeSessionId ? force.get(activeSessionId) : null;
+  const { config: agentCfg } = useAgentConfig();
+  const { config: externalCfg } = useExternalConfig();
+  const agentConfigured = agentCfg?.workspace_path != null;
+  const externalConfigured = externalCfg?.endpoint_url != null;
+
+  const onRequestConfigure = () => {
+    void invoke("open_settings_window");
+  };
 
   const onChangeForce = (next: DropdownValue) => {
     if (!activeSessionId) return;
@@ -81,6 +92,9 @@ export default function PolicyPanel({
             labels={FORCE_LABELS}
             ariaLabel="Session force override"
             disabled={activeSessionId === null}
+            agentConfigured={agentConfigured}
+            externalConfigured={externalConfigured}
+            onRequestConfigure={onRequestConfigure}
           />
         </div>
 
