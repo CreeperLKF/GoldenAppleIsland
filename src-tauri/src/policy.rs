@@ -11,11 +11,19 @@ pub const SESSION_RULE_CAP: usize = 5;
 pub enum PolicyKind {
     Manual,
     Auto,
+    Agent,
+    External,
 }
 
 impl Default for PolicyKind {
     fn default() -> Self {
         PolicyKind::Manual
+    }
+}
+
+impl PolicyKind {
+    pub fn is_delegating(&self) -> bool {
+        matches!(self, PolicyKind::Agent | PolicyKind::External)
     }
 }
 
@@ -272,6 +280,16 @@ mod tests {
         let r = resolve(&ev, &ctx, &policies);
         assert_eq!(r.kind, PolicyKind::Manual);
         assert_eq!(r.scope, PolicyScope::Session);
+    }
+
+    #[test]
+    fn policy_kind_serde_includes_agent_and_external() {
+        let a: PolicyKind = serde_json::from_str("\"agent\"").unwrap();
+        let e: PolicyKind = serde_json::from_str("\"external\"").unwrap();
+        assert!(matches!(a, PolicyKind::Agent));
+        assert!(matches!(e, PolicyKind::External));
+        assert_eq!(serde_json::to_string(&PolicyKind::Agent).unwrap(), "\"agent\"");
+        assert_eq!(serde_json::to_string(&PolicyKind::External).unwrap(), "\"external\"");
     }
 
     #[test]
