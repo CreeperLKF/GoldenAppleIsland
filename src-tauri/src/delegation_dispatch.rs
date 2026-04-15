@@ -255,3 +255,37 @@ fn capitalize(s: &str) -> String {
 fn short(s: &str) -> String {
     s.chars().take(160).collect()
 }
+
+/// Cancel an in-flight delegation and push the original event onto the manual
+/// pending queue with a "Taken over" banner.
+#[allow(dead_code)]
+pub async fn take_over(app: AppHandle, event_id: String) -> Result<(), String> {
+    let handle = delegation::remove(&event_id)
+        .ok_or_else(|| format!("no delegation in flight for {}", event_id))?;
+
+    // Drop the sender — the spawned task's select! arm fires, the task
+    // returns, and the Drop guard on any spawned claude child kills it.
+    drop(handle.cancel_tx);
+
+    // We need the original event; fetch it from the ws queue snapshot.
+    // ws::handle_connection inserted the event into queue() before calling
+    // dispatch, so it is still present until send_response removes it.
+    let snapshot = ws::snapshot_queue();
+    let ev = snapshot
+        .into_iter()
+        .find(|e| e.id == event_id)
+        .ok_or_else(|| format!("no queued event for {}", event_id))?;
+
+    let (banner, source) = match handle.kind {
+        DelegationKind::Agent => ("Taken over from Agent".to_string(), "agent"),
+        DelegationKind::External => ("Taken over from External".to_string(), "external"),
+    };
+
+    let mut enriched = ev;
+    enriched.resolved_kind = Some(PolicyKind::Manual);
+    enriched.delegation_banner = Some(banner);
+    ws::enqueue_event_as_manual(&app, enriched);
+
+    emit_resolved(&app, &event_id, "takenover", source, None);
+    Ok(())
+}
