@@ -8,6 +8,7 @@ mod ws;
 mod wsl_admin;
 mod windows_hook;
 mod hook_modes;
+mod hook_reconcile;
 mod hotkeys;
 
 use std::sync::OnceLock;
