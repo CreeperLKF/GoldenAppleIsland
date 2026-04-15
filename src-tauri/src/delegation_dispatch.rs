@@ -25,7 +25,17 @@ pub async fn dispatch(app: AppHandle, event: HookEvent, kind: PolicyKind) {
     let delegation_kind = match kind {
         PolicyKind::Agent => DelegationKind::Agent,
         PolicyKind::External => DelegationKind::External,
-        _ => unreachable!("dispatch called with non-delegating kind"),
+        other => {
+            log::error!(
+                "delegation_dispatch::dispatch called with non-delegating kind {:?} for event {}",
+                other,
+                event.id
+            );
+            // Fall through to manual — the pending tx is still live; the user
+            // can answer once it re-renders as a normal card.
+            fallthrough_manual(&app, event, "non-delegating kind reached dispatch").await;
+            return;
+        }
     };
 
     match kind {
@@ -62,7 +72,9 @@ pub async fn dispatch(app: AppHandle, event: HookEvent, kind: PolicyKind) {
             )
             .await;
         }
-        _ => unreachable!(),
+        // Non-delegating kinds are already handled by the early return in
+        // the match above; these arms are only needed for exhaustiveness.
+        PolicyKind::Manual | PolicyKind::Auto => {}
     }
 }
 
