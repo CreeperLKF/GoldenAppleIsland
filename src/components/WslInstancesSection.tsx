@@ -1,10 +1,14 @@
 import { useWslDistros } from "../hooks/useWslDistros";
 import Toggle from "./ui/Toggle";
 import type { WslDistroWithStatus } from "../types/settings";
+import { EMPTY_CUSTOM, type HookTargetConfig } from "../types/modes";
+import { useAppSettings } from "../hooks/useAppSettings";
+import HookModeDropdown from "./HookModeDropdown";
 
 export default function WslInstancesSection() {
-  const { distros, loading, error, busy, updating, refresh, checkDistro, setEnabled, setAll, updateScripts } =
+  const { distros, loading, error, busy, updating, refresh, checkDistro, setEnabled, setAll, updateScripts, setConfig } =
     useWslDistros();
+  const { settings } = useAppSettings();
 
   return (
     <section className="flex flex-col" style={{ padding: "12px 16px", gap: 10 }}>
@@ -108,6 +112,11 @@ export default function WslInstancesSection() {
           <DistroRow
             key={d.name}
             distro={d}
+            config={settings?.wsl_hook_configs?.[d.name] ?? {
+              mode: settings?.default_mode ?? "audit",
+              custom: EMPTY_CUSTOM,
+            }}
+            onConfigChange={(next: HookTargetConfig) => setConfig(d.name, next)}
             busy={busy.has(d.name)}
             onToggle={(next) => setEnabled(d.name, next)}
             onCheck={() => checkDistro(d.name)}
@@ -120,11 +129,15 @@ export default function WslInstancesSection() {
 
 function DistroRow({
   distro,
+  config,
+  onConfigChange,
   busy,
   onToggle,
   onCheck,
 }: {
   distro: WslDistroWithStatus;
+  config: HookTargetConfig;
+  onConfigChange: (next: HookTargetConfig) => void;
   busy: boolean;
   onToggle: (next: boolean) => void;
   onCheck: () => void;
@@ -205,6 +218,11 @@ function DistroRow({
         </div>
       </div>
       <div className="flex items-center" style={{ gap: 8 }}>
+        <HookModeDropdown
+          config={config}
+          onChange={(next) => onConfigChange(next)}
+          disabled={busy}
+        />
         {busy && (
           <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
             …

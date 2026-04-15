@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import log from "../lib/log";
 import ApprovalPoliciesSection from "./ApprovalPoliciesSection";
 import GlobalShortcutsSection from "./GlobalShortcutsSection";
@@ -11,6 +12,7 @@ import WslInstancesSection from "./WslInstancesSection";
 import SettingsTabs, { type TabDef } from "./SettingsTabs";
 import { useAppSettings } from "../hooks/useAppSettings";
 import type { AppSettings, SettingsTabId } from "../types/settings";
+import type { WorkingMode } from "../types/modes";
 
 function SubsectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -53,9 +55,44 @@ function GeneralTab({
   );
 }
 
-function HookManagementTab() {
+function HookManagementTab({
+  settings,
+  update,
+}: {
+  settings: AppSettings;
+  update: (patch: Partial<AppSettings>) => Promise<void>;
+}) {
+  const onDefaultChange = async (mode: WorkingMode) => {
+    await invoke("set_default_mode", { mode });
+    await update({});
+  };
   return (
     <div className="flex flex-col" style={{ gap: 0 }}>
+      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Default mode:</span>
+        <select
+          value={settings.default_mode}
+          onChange={(e) => onDefaultChange(e.target.value as WorkingMode)}
+          style={{
+            height: 24,
+            fontSize: 11,
+            padding: "0 6px",
+            background: "var(--bg-elevated)",
+            color: "var(--text-primary)",
+            border: "0.5px solid var(--border)",
+            borderRadius: 4,
+          }}
+        >
+          <option value="control">Control</option>
+          <option value="audit">Audit</option>
+          <option value="observe">Observe</option>
+          <option value="custom">Custom</option>
+        </select>
+        <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+          (applies only to newly enabled targets)
+        </span>
+      </div>
+      <SubsectionDivider />
       <SubsectionHeading>Windows hook</SubsectionHeading>
       <WindowsHookSection />
       <SubsectionDivider />
@@ -103,7 +140,7 @@ export default function SettingsWindow() {
         {
           id: "hooks",
           label: "Hook Management",
-          content: <HookManagementTab />,
+          content: <HookManagementTab settings={settings} update={update} />,
         },
       ]
     : [];

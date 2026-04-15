@@ -2,12 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Toggle from "./ui/Toggle";
 import type { HookStatus } from "../types/settings";
+import HookModeDropdown from "./HookModeDropdown";
+import { DEFAULT_CONFIG } from "../types/modes";
+import { useAppSettings } from "../hooks/useAppSettings";
 
 export default function WindowsHookSection() {
   const [status, setStatus] = useState<HookStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { settings, update: updateSettings } = useAppSettings();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -102,6 +106,14 @@ export default function WindowsHookSection() {
             <span style={{ fontSize: 11, color: statusColor }}>{statusLabel}</span>
           </div>
           <div className="flex items-center" style={{ gap: 8 }}>
+            <HookModeDropdown
+              config={settings?.windows_hook_config ?? DEFAULT_CONFIG}
+              onChange={async (next) => {
+                await invoke("set_windows_hook_config", { config: next });
+                await updateSettings({});
+              }}
+              disabled={busy}
+            />
             {busy && (
               <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
                 …

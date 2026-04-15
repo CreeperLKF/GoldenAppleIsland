@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { BulkResult, HookStatus, WslDistroWithStatus } from "../types/settings";
+import type { HookTargetConfig } from "../types/modes";
 
 interface State {
   loading: boolean;
@@ -119,5 +120,13 @@ export function useWslDistros() {
     }
   }, [refresh]);
 
-  return { ...state, busy, updating, refresh, checkDistro, setEnabled, setAll, updateScripts };
+  const setConfig = useCallback(
+    async (distro: string, config: HookTargetConfig) => {
+      await invoke("set_wsl_hook_config", { distro, config });
+      await refresh();
+    },
+    [refresh],
+  );
+
+  return { ...state, busy, updating, refresh, checkDistro, setEnabled, setAll, updateScripts, setConfig };
 }
