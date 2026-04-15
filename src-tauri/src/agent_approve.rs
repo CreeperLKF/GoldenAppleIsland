@@ -75,6 +75,54 @@ pub fn nuke_default_workspace(dir: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+use crate::ws::HookEvent;
+
+/// Render the hook event as a neutral YAML-ish prompt block fed to `claude -p`.
+pub fn build_prompt(event: &HookEvent) -> String {
+    let mut out = String::new();
+    out.push_str(
+        "A Claude Code session needs approval for the following operation. \
+Review it according to CLAUDE.md in this workspace and respond with the \
+required JSON verdict.\n\n",
+    );
+    out.push_str("operation:\n");
+    out.push_str(&format!("  session_id: {}\n", event.session_id));
+    out.push_str(&format!("  session_cwd: {}\n", event.session_cwd));
+    out.push_str(&format!("  source_distro: {}\n", event.source_distro));
+    out.push_str(&format!("  tool_name: {}\n", event.tool_name));
+    out.push_str("  tool_input:\n");
+    render_tool_input(&mut out, &event.tool_input, 4);
+    out.push_str(&format!("  timestamp: {}\n", event.timestamp));
+    out
+}
+
+fn render_tool_input(out: &mut String, value: &serde_json::Value, indent: usize) {
+    let pad = " ".repeat(indent);
+    match value {
+        serde_json::Value::Object(map) => {
+            for (k, v) in map {
+                match v {
+                    serde_json::Value::String(s) if s.contains('\n') || s.len() > 20 => {
+                        out.push_str(&format!("{}{}: |\n", pad, k));
+                        for line in s.lines() {
+                            out.push_str(&format!("{}  {}\n", pad, line));
+                        }
+                    }
+                    serde_json::Value::String(s) => {
+                        out.push_str(&format!("{}{}: {}\n", pad, k, s));
+                    }
+                    other => {
+                        out.push_str(&format!("{}{}: {}\n", pad, k, other));
+                    }
+                }
+            }
+        }
+        other => {
+            out.push_str(&format!("{}{}\n", pad, other));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -124,5 +172,56 @@ mod tests {
         write_default_workspace(&dir, "# x\n", "2026-04-16T00:00:00Z").unwrap();
         nuke_default_workspace(&dir).unwrap();
         assert!(!dir.exists());
+    }
+
+    #[test]
+    fn build_prompt_renders_bash_event_yaml_ish() {
+        use crate::ws::HookEvent;
+        let event = HookEvent {
+            r#type: "hook_event".into(),
+            id: "evt_1".into(),
+            session_id: "sess_def456".into(),
+            session_cwd: "/home/linearkf/projects/my-app".into(),
+            source_distro: "Ubuntu".into(),
+            hook_type: "pre_tool_use".into(),
+            tool_name: "bash".into(),
+            tool_input: serde_json::json!({ "command": "rm -rf ./dist && npm run build" }),
+            timestamp: "2026-04-16T10:30:00Z".into(),
+            resolved_kind: None,
+            resolved_scope: None,
+        };
+        let prompt = build_prompt(&event);
+        assert!(prompt.contains("session_id: sess_def456"));
+        assert!(prompt.contains("source_distro: Ubuntu"));
+        assert!(prompt.contains("tool_name: bash"));
+        assert!(prompt.contains("rm -rf ./dist"));
+        // Literal block scalar for commands
+        assert!(prompt.contains("command: |"));
+    }
+
+    #[test]
+    fn build_prompt_handles_write_event_with_content() {
+        use crate::ws::HookEvent;
+        let event = HookEvent {
+            r#type: "hook_event".into(),
+            id: "evt_2".into(),
+            session_id: "s".into(),
+            session_cwd: "/w".into(),
+            source_distro: "windows".into(),
+            hook_type: "pre_tool_use".into(),
+            tool_name: "write".into(),
+            tool_input: serde_json::json!({
+                "file_path": "src/x.ts",
+                "content": "line1\nline2\n",
+            }),
+            timestamp: "2026-04-16T00:00:00Z".into(),
+            resolved_kind: None,
+            resolved_scope: None,
+        };
+        let prompt = build_prompt(&event);
+        assert!(prompt.contains("tool_name: write"));
+        assert!(prompt.contains("file_path: src/x.ts"));
+        assert!(prompt.contains("content: |"));
+        assert!(prompt.contains("line1"));
     }
 }
