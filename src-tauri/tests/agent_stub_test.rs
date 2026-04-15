@@ -94,7 +94,7 @@ async fn approve_happy_path() {
     .to_string();
     std::env::set_var("GAI_STUB_ENVELOPE", &envelope);
 
-    agent_approve::clear_session();
+    agent_approve::clear_session_for_test();
     let (orig, _) = push_path(tmp.path());
     let result = agent_approve::run_agent_call("prompt", &ws, 30, 20).await;
     restore_path(orig);
@@ -133,7 +133,7 @@ async fn malformed_verdict_surfaces_as_error() {
     .to_string();
     std::env::set_var("GAI_STUB_ENVELOPE", &envelope);
 
-    agent_approve::clear_session();
+    agent_approve::clear_session_for_test();
     let (orig, _) = push_path(tmp.path());
     let result = agent_approve::run_agent_call("prompt", &ws, 30, 20).await;
     restore_path(orig);

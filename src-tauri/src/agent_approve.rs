@@ -116,6 +116,10 @@ struct AgentSessionState {
     workspace_path: PathBuf,
 }
 
+/// Singleton agent session. Must only be mutated while holding `agent_mutex()`.
+/// `snapshot_session` reads are safe without the mutex, but any pair of
+/// operations that rely on consistent state (e.g. check-then-clear) must
+/// hold the mutex.
 static SESSION: OnceLock<Mutex<Option<AgentSessionState>>> = OnceLock::new();
 
 fn cell() -> &'static Mutex<Option<AgentSessionState>> {
@@ -123,7 +127,13 @@ fn cell() -> &'static Mutex<Option<AgentSessionState>> {
 }
 
 pub fn snapshot_session() -> Option<AgentSessionSnapshot> {
-    let guard = cell().lock().unwrap();
+    let guard = match cell().lock() {
+        Ok(g) => g,
+        Err(_poisoned) => {
+            log::error!("agent SESSION mutex poisoned; treating as empty");
+            return None;
+        }
+    };
     guard.as_ref().map(|s| AgentSessionSnapshot {
         session_id: s.session_id.clone(),
         turn_count: s.turn_count,
@@ -131,15 +141,29 @@ pub fn snapshot_session() -> Option<AgentSessionSnapshot> {
     })
 }
 
-pub fn clear_session() {
-    let mut guard = cell().lock().unwrap();
+pub(crate) fn clear_session() {
+    let mut guard = match cell().lock() {
+        Ok(g) => g,
+        Err(poisoned) => {
+            log::error!("agent SESSION mutex poisoned; recovering in clear_session");
+            let mut inner = poisoned.into_inner();
+            *inner = None;
+            return;
+        }
+    };
     *guard = None;
 }
 
 /// Returns true if the next call must start fresh (omit `--resume`) because
 /// the current session has already reached `turn_limit`.
 pub fn should_rollover_before_next_call(turn_limit: u32) -> bool {
-    let guard = cell().lock().unwrap();
+    let guard = match cell().lock() {
+        Ok(g) => g,
+        Err(_poisoned) => {
+            log::error!("agent SESSION mutex poisoned; treating as empty");
+            return false;
+        }
+    };
     match guard.as_ref() {
         None => false,
         Some(s) => s.turn_count >= turn_limit,
@@ -149,8 +173,16 @@ pub fn should_rollover_before_next_call(turn_limit: u32) -> bool {
 /// Record a completed call. Called by the caller after `run_agent_call` parses
 /// a verdict successfully. Starts a new session if `session_id` differs from
 /// the current one, otherwise increments turn count.
-pub fn record_turn_with_workspace(session_id: &str, workspace_path: PathBuf) {
-    let mut guard = cell().lock().unwrap();
+pub(crate) fn record_turn_with_workspace(session_id: &str, workspace_path: PathBuf) {
+    let mut guard = match cell().lock() {
+        Ok(g) => g,
+        Err(poisoned) => {
+            log::error!("agent SESSION mutex poisoned; recovering in record_turn_with_workspace");
+            let mut inner = poisoned.into_inner();
+            *inner = None;
+            inner
+        }
+    };
     match guard.as_mut() {
         Some(s) if s.session_id == session_id => {
             s.turn_count += 1;
@@ -282,6 +314,8 @@ pub async fn run_agent_call(
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         log::warn!("agent call non-zero exit: {}", stderr);
+        // Post-spawn failure: a broken session shouldn't stick to future --resume.
+        clear_session();
         return Err(AgentCallError::NonZeroExit(
             output.status.code().unwrap_or(-1),
             stderr.chars().take(400).collect::<String>(),
@@ -289,26 +323,44 @@ pub async fn run_agent_call(
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let envelope: ClaudeEnvelope = serde_json::from_str(&stdout)
-        .map_err(|e| AgentCallError::MalformedEnvelope(e.to_string()))?;
+    let envelope: ClaudeEnvelope = match serde_json::from_str::<ClaudeEnvelope>(&stdout) {
+        Ok(e) => e,
+        Err(e) => {
+            clear_session();
+            return Err(AgentCallError::MalformedEnvelope(e.to_string()));
+        }
+    };
     if envelope.is_error {
+        clear_session();
         return Err(AgentCallError::MalformedEnvelope(
             envelope.error.unwrap_or_else(|| "is_error=true".to_string()),
         ));
     }
-    let result_text = envelope
-        .result
-        .ok_or_else(|| AgentCallError::MalformedEnvelope("missing 'result' field".into()))?;
+    let result_text = match envelope.result {
+        Some(r) => r,
+        None => {
+            clear_session();
+            return Err(AgentCallError::MalformedEnvelope(
+                "missing 'result' field".into(),
+            ));
+        }
+    };
 
-    let parsed = verdict::parse_strict(&result_text).map_err(|e| match e {
-        VerdictParseError::NotStrictJson => {
-            AgentCallError::MalformedVerdict("not strict JSON".into())
+    let parsed = match verdict::parse_strict(&result_text) {
+        Ok(v) => v,
+        Err(e) => {
+            clear_session();
+            return Err(match e {
+                VerdictParseError::NotStrictJson => {
+                    AgentCallError::MalformedVerdict("not strict JSON".into())
+                }
+                VerdictParseError::MalformedJson(m) | VerdictParseError::UnknownKind(m) => {
+                    AgentCallError::MalformedVerdict(m)
+                }
+                VerdictParseError::Empty => AgentCallError::MalformedVerdict("empty".into()),
+            });
         }
-        VerdictParseError::MalformedJson(m) | VerdictParseError::UnknownKind(m) => {
-            AgentCallError::MalformedVerdict(m)
-        }
-        VerdictParseError::Empty => AgentCallError::MalformedVerdict("empty".into()),
-    })?;
+    };
 
     if let Some(sid) = envelope.session_id {
         record_turn_with_workspace(&sid, workspace.to_path_buf());
@@ -358,6 +410,14 @@ pub(crate) fn record_turn(session_id: &str) {
 
 #[cfg(test)]
 pub(crate) fn reset_session_for_test() {
+    clear_session();
+}
+
+/// Test-only helper exposed for integration tests (separate crate).
+/// Not intended for production use — prefer letting `run_agent_call`
+/// manage session state.
+#[doc(hidden)]
+pub fn clear_session_for_test() {
     clear_session();
 }
 
