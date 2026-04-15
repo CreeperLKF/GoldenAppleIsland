@@ -109,6 +109,38 @@ export default function HistoryList({ items, collapsed }: HistoryListProps) {
                   auto
                 </span>
               )}
+              {item.source === "agent" && (
+                <span
+                  title={item.reason ?? undefined}
+                  style={{
+                    fontSize: 10,
+                    padding: "0 4px",
+                    marginRight: 6,
+                    borderRadius: 3,
+                    background: "#EDE7F6",
+                    color: "#4527A0",
+                    border: "0.5px solid #B39DDB",
+                  }}
+                >
+                  agent
+                </span>
+              )}
+              {item.source === "external" && (
+                <span
+                  title={item.reason ?? undefined}
+                  style={{
+                    fontSize: 10,
+                    padding: "0 4px",
+                    marginRight: 6,
+                    borderRadius: 3,
+                    background: "#E0F2F1",
+                    color: "#00695C",
+                    border: "0.5px solid #80CBC4",
+                  }}
+                >
+                  external
+                </span>
+              )}
               <span
                 className="text-[var(--text-secondary)] flex-1 truncate"
                 style={{ marginRight: 8 }}
