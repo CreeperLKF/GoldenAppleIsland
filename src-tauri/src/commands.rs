@@ -112,7 +112,16 @@ pub async fn list_wsl_distros() -> Result<Vec<WslDistroWithStatus>, String> {
 #[tauri::command]
 pub async fn set_hook_enabled(distro: String, enabled: bool) -> Result<(), String> {
     if enabled {
-        wsl_admin::enable_hook(&distro).await
+        let settings = app_settings::get();
+        let cfg = settings
+            .wsl_hook_configs
+            .get(&distro)
+            .cloned()
+            .unwrap_or_else(|| crate::hook_modes::HookTargetConfig {
+                mode: settings.default_mode,
+                custom: crate::hook_modes::CustomHookSet::default(),
+            });
+        wsl_admin::enable_hook(&distro, &cfg).await
     } else {
         wsl_admin::disable_hook(&distro).await
     }

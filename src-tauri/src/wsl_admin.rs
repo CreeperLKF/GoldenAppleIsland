@@ -1,18 +1,35 @@
+use std::collections::HashSet;
 use std::process::Stdio;
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
 use crate::app_settings::{self, CachedHookStatus};
+use crate::hook_modes::{HookEventKind, HookTargetConfig};
+use crate::hook_reconcile::{apply_desired_set, HookTarget};
 
-const HOOK_COMMAND: &str = "~/.claude/hooks/pre-tool-use.sh";
-const PERM_HOOK_COMMAND: &str = "~/.claude/hooks/permission-request.sh";
-const PRE_TOOL_USE_SH: &str = include_str!("../../wsl/pre-tool-use.sh");
-const PERMISSION_REQUEST_SH: &str = include_str!("../../wsl/permission-request.sh");
 const BRIDGE_MJS: &str = include_str!("../../wsl/bridge.mjs");
+
+struct WslScriptAsset {
+    basename: &'static str,
+    content: &'static str,
+}
+
+const WSL_SCRIPTS: &[WslScriptAsset] = &[
+    WslScriptAsset { basename: "pre-tool-use",       content: include_str!("../../wsl/pre-tool-use.sh") },
+    WslScriptAsset { basename: "permission-request", content: include_str!("../../wsl/permission-request.sh") },
+    WslScriptAsset { basename: "user-prompt-submit", content: include_str!("../../wsl/user-prompt-submit.sh") },
+    WslScriptAsset { basename: "post-tool-use",      content: include_str!("../../wsl/post-tool-use.sh") },
+    WslScriptAsset { basename: "notification",       content: include_str!("../../wsl/notification.sh") },
+    WslScriptAsset { basename: "stop",               content: include_str!("../../wsl/stop.sh") },
+    WslScriptAsset { basename: "subagent-stop",      content: include_str!("../../wsl/subagent-stop.sh") },
+    WslScriptAsset { basename: "pre-compact",        content: include_str!("../../wsl/pre-compact.sh") },
+    WslScriptAsset { basename: "session-start",      content: include_str!("../../wsl/session-start.sh") },
+    WslScriptAsset { basename: "session-end",        content: include_str!("../../wsl/session-end.sh") },
+];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WslDistro {
@@ -169,6 +186,26 @@ async fn write_file_in_distro(
     Ok(())
 }
 
+fn any_managed_hook_present(settings: &Value) -> bool {
+    let Some(hooks) = settings.get("hooks").and_then(|h| h.as_object()) else {
+        return false;
+    };
+    for arr in hooks.values() {
+        let Some(arr) = arr.as_array() else { continue };
+        for group in arr {
+            let Some(inner) = group.get("hooks").and_then(|v| v.as_array()) else { continue };
+            for hook in inner {
+                if let Some(cmd) = hook.get("command").and_then(|c| c.as_str()) {
+                    if cmd.starts_with("~/.claude/hooks/") && cmd.ends_with(".sh") {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
+}
+
 pub async fn get_hook_status(distro: &str) -> Result<HookStatus, String> {
     let (test_code, _, _) =
         run_in_distro(distro, "test -f ~/.claude/hooks/pre-tool-use.sh && test -f ~/.claude/hooks/permission-request.sh").await?;
@@ -181,7 +218,7 @@ pub async fn get_hook_status(distro: &str) -> Result<HookStatus, String> {
     .await?;
 
     let registered = match serde_json::from_str::<Value>(stdout.trim()) {
-        Ok(v) => has_hook_entry(&v),
+        Ok(v) => any_managed_hook_present(&v),
         Err(_) => false,
     };
 
@@ -191,107 +228,6 @@ pub async fn get_hook_status(distro: &str) -> Result<HookStatus, String> {
     })
 }
 
-fn has_hook_entry(settings: &Value) -> bool {
-    has_hook_for_event(settings, "PreToolUse", HOOK_COMMAND)
-        && has_hook_for_event(settings, "PermissionRequest", PERM_HOOK_COMMAND)
-}
-
-fn has_hook_for_event(settings: &Value, event_name: &str, command: &str) -> bool {
-    let Some(groups) = settings
-        .get("hooks")
-        .and_then(|h| h.get(event_name))
-        .and_then(|v| v.as_array())
-    else {
-        return false;
-    };
-    for group in groups {
-        let Some(hooks) = group.get("hooks").and_then(|v| v.as_array()) else {
-            continue;
-        };
-        for hook in hooks {
-            if hook.get("command").and_then(|c| c.as_str()) == Some(command) {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-fn add_hook_entry(settings: &mut Value) {
-    add_hook_for_event(settings, "PreToolUse", HOOK_COMMAND, None);
-    add_hook_for_event(settings, "PermissionRequest", PERM_HOOK_COMMAND, Some(86400));
-}
-
-fn add_hook_for_event(settings: &mut Value, event_name: &str, command: &str, timeout: Option<u64>) {
-    if !settings.is_object() {
-        *settings = json!({});
-    }
-    let obj = settings.as_object_mut().unwrap();
-    let hooks_entry = obj.entry("hooks").or_insert_with(|| json!({}));
-    if !hooks_entry.is_object() {
-        *hooks_entry = json!({});
-    }
-    let hooks = hooks_entry.as_object_mut().unwrap();
-    let entry = hooks
-        .entry(event_name)
-        .or_insert_with(|| Value::Array(vec![]));
-    if !entry.is_array() {
-        *entry = Value::Array(vec![]);
-    }
-    let arr = entry.as_array_mut().unwrap();
-
-    // If our entry already exists, nothing to do.
-    for group in arr.iter() {
-        if let Some(inner) = group.get("hooks").and_then(|v| v.as_array()) {
-            for hook in inner {
-                if hook.get("command").and_then(|c| c.as_str()) == Some(command) {
-                    return;
-                }
-            }
-        }
-    }
-
-    let mut hook_obj = json!({ "type": "command", "command": command });
-    if let Some(t) = timeout {
-        hook_obj.as_object_mut().unwrap().insert("timeout".to_string(), json!(t));
-    }
-
-    arr.push(json!({
-        "matcher": "*",
-        "hooks": [hook_obj]
-    }));
-}
-
-fn remove_hook_entry(settings: &mut Value) {
-    remove_hook_for_event(settings, "PreToolUse", HOOK_COMMAND);
-    remove_hook_for_event(settings, "PermissionRequest", PERM_HOOK_COMMAND);
-}
-
-fn remove_hook_for_event(settings: &mut Value, event_name: &str, command: &str) {
-    let Some(arr) = settings
-        .get_mut("hooks")
-        .and_then(|h| h.get_mut(event_name))
-        .and_then(|v| v.as_array_mut())
-    else {
-        return;
-    };
-
-    for group in arr.iter_mut() {
-        if let Some(inner) = group.get_mut("hooks").and_then(|v| v.as_array_mut()) {
-            inner.retain(|hook| {
-                hook.get("command").and_then(|c| c.as_str()) != Some(command)
-            });
-        }
-    }
-    arr.retain(|group| {
-        group
-            .get("hooks")
-            .and_then(|v| v.as_array())
-            .map(|a| !a.is_empty())
-            .unwrap_or(false)
-    });
-}
-
 async fn read_settings(distro: &str) -> Result<Value, String> {
     let (code, stdout, _stderr) = run_in_distro(
         distro,
@@ -299,11 +235,11 @@ async fn read_settings(distro: &str) -> Result<Value, String> {
     )
     .await?;
     if code != 0 {
-        return Ok(json!({}));
+        return Ok(serde_json::json!({}));
     }
     let trimmed = stdout.trim();
     if trimmed.is_empty() {
-        return Ok(json!({}));
+        return Ok(serde_json::json!({}));
     }
     match serde_json::from_str::<Value>(trimmed) {
         Ok(v) if v.is_object() => Ok(v),
@@ -326,11 +262,17 @@ async fn write_settings(distro: &str, settings: &Value) -> Result<(), String> {
 }
 
 async fn ensure_scripts(distro: &str) -> Result<(), String> {
-    write_file_in_distro(distro, "~/.claude/hooks/pre-tool-use.sh", PRE_TOOL_USE_SH).await?;
-    write_file_in_distro(distro, "~/.claude/hooks/permission-request.sh", PERMISSION_REQUEST_SH).await?;
+    for s in WSL_SCRIPTS {
+        let path = format!("~/.claude/hooks/{}.sh", s.basename);
+        write_file_in_distro(distro, &path, s.content).await?;
+    }
     write_file_in_distro(distro, "~/.claude/hooks/bridge.mjs", BRIDGE_MJS).await?;
-    let (code, _, stderr) =
-        run_in_distro(distro, "chmod +x ~/.claude/hooks/pre-tool-use.sh ~/.claude/hooks/permission-request.sh").await?;
+    let chmod_list: Vec<String> = WSL_SCRIPTS
+        .iter()
+        .map(|s| format!("~/.claude/hooks/{}.sh", s.basename))
+        .collect();
+    let chmod_cmd = format!("chmod +x {}", chmod_list.join(" "));
+    let (code, _, stderr) = run_in_distro(distro, &chmod_cmd).await?;
     if code != 0 {
         return Err(format!("chmod failed in {}: {}", distro, stderr));
     }
@@ -368,15 +310,15 @@ pub async fn update_scripts_all() -> Vec<BulkResult> {
     out
 }
 
-pub async fn enable_hook(distro: &str) -> Result<(), String> {
+pub async fn enable_hook(distro: &str, config: &HookTargetConfig) -> Result<(), String> {
     ensure_scripts(distro).await?;
+    let desired = crate::hook_modes::resolve(config);
     let mut settings = read_settings(distro).await?;
-    add_hook_entry(&mut settings);
+    apply_desired_set(&mut settings, HookTarget::Wsl, &desired);
     write_settings(distro, &settings).await
 }
 
 pub async fn disable_hook(distro: &str) -> Result<(), String> {
-    // If settings file is missing or empty, there's nothing to do.
     let mut settings = match read_settings(distro).await {
         Ok(v) => v,
         Err(e) => {
@@ -384,25 +326,38 @@ pub async fn disable_hook(distro: &str) -> Result<(), String> {
             return Ok(());
         }
     };
-    remove_hook_entry(&mut settings);
+    let empty: HashSet<HookEventKind> = HashSet::new();
+    apply_desired_set(&mut settings, HookTarget::Wsl, &empty);
+    write_settings(distro, &settings).await
+}
+
+pub async fn apply_config(distro: &str, config: &HookTargetConfig) -> Result<(), String> {
+    ensure_scripts(distro).await?;
+    let desired = crate::hook_modes::resolve(config);
+    let mut settings = read_settings(distro).await?;
+    apply_desired_set(&mut settings, HookTarget::Wsl, &desired);
     write_settings(distro, &settings).await
 }
 
 pub async fn set_hook_all(enabled: bool) -> Vec<BulkResult> {
     let distros = match list_distros().await {
         Ok(d) => d,
-        Err(e) => {
-            return vec![BulkResult {
-                distro: String::from("<list>"),
-                ok: false,
-                error: Some(e),
-            }]
-        }
+        Err(e) => return vec![BulkResult { distro: String::from("<list>"), ok: false, error: Some(e) }],
+    };
+    let settings = app_settings::get();
+    let default_cfg = HookTargetConfig {
+        mode: settings.default_mode,
+        custom: crate::hook_modes::CustomHookSet::default(),
     };
     let mut out = Vec::with_capacity(distros.len());
     for d in distros {
         let res = if enabled {
-            enable_hook(&d.name).await
+            let cfg = settings
+                .wsl_hook_configs
+                .get(&d.name)
+                .cloned()
+                .unwrap_or_else(|| default_cfg.clone());
+            enable_hook(&d.name, &cfg).await
         } else {
             disable_hook(&d.name).await
         };
@@ -410,11 +365,7 @@ pub async fn set_hook_all(enabled: bool) -> Vec<BulkResult> {
             Ok(_) => (true, None),
             Err(e) => (false, Some(e)),
         };
-        out.push(BulkResult {
-            distro: d.name,
-            ok,
-            error,
-        });
+        out.push(BulkResult { distro: d.name, ok, error });
     }
     out
 }
