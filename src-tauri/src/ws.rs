@@ -77,6 +77,52 @@ pub(crate) fn enqueue_event_as_manual(app: &AppHandle, event: HookEvent) {
     }
 }
 
+fn enqueue_manual(app: &AppHandle, event: HookEvent, tx: mpsc::Sender<HookResponse>) {
+    pending().insert(event.id.clone(), tx);
+    queue().insert(event.id.clone(), event.clone());
+    if let Err(e) = app.emit("hook_event", event) {
+        log::warn!("emit hook_event failed: {}", e);
+    }
+}
+
+async fn resolve_auto(
+    app: &AppHandle,
+    event: HookEvent,
+    scope: PolicyScope,
+    tx: mpsc::Sender<HookResponse>,
+) {
+    let resp = HookResponse {
+        r#type: "hook_response".to_string(),
+        id: event.id.clone(),
+        action: "approve".to_string(),
+        answer: None,
+        session_mode: None,
+    };
+    // Deliver directly to the receiver kept in handle_connection; no pending
+    // slot needed because no frontend interaction happens for Auto.
+    let _ = tx.send(resp).await;
+    if let Err(e) = app.emit(
+        "hook_event_auto_resolved",
+        serde_json::json!({
+            "event": event,
+            "scope": scope,
+            "source": "policy",
+        }),
+    ) {
+        log::warn!("emit hook_event_auto_resolved failed: {}", e);
+    }
+    let ev_for_audit = event.clone();
+    tokio::spawn(async move {
+        crate::audit_history::record_blocking(
+            &ev_for_audit,
+            crate::audit_history::Decision::Approve,
+            crate::audit_history::DecisionSource::Auto,
+            None,
+        )
+        .await;
+    });
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct HookResponse {
     pub r#type: String,
@@ -239,50 +285,28 @@ async fn handle_connection(
             resolved.scope
         );
 
-        if resolved.kind == PolicyKind::Auto {
-            pending().insert(event.id.clone(), tx);
-            let resp = HookResponse {
-                r#type: "hook_response".to_string(),
-                id: event.id.clone(),
-                action: "approve".to_string(),
-                answer: None,
-                session_mode: None,
-            };
-            if let Some((_, chan)) = pending().remove(&event.id) {
-                let _ = chan.send(resp).await;
+        match resolved.kind {
+            PolicyKind::Auto => {
+                resolve_auto(&app, event.clone(), resolved.scope, tx).await;
             }
-            if let Err(e) = app.emit(
-                "hook_event_auto_resolved",
-                serde_json::json!({
-                    "event": event,
-                    "scope": resolved.scope,
-                }),
-            ) {
-                log::warn!("emit hook_event_auto_resolved failed: {}", e);
+            PolicyKind::Manual => {
+                let mut enriched = event.clone();
+                enriched.resolved_kind = Some(resolved.kind);
+                enriched.resolved_scope = Some(resolved.scope);
+                enqueue_manual(&app, enriched, tx);
             }
-            let ev_for_audit = event.clone();
-            tokio::spawn(async move {
-                crate::audit_history::record_blocking(
-                    &ev_for_audit,
-                    crate::audit_history::Decision::Approve,
-                    crate::audit_history::DecisionSource::Auto,
-                    None,
-                )
-                .await;
-            });
-        } else {
-            pending().insert(event.id.clone(), tx);
-            let mut enriched = event.clone();
-            enriched.resolved_kind = Some(resolved.kind);
-            enriched.resolved_scope = Some(resolved.scope);
-            queue().insert(event.id.clone(), enriched.clone());
-            if let Err(e) = app.emit("hook_event", enriched) {
-                log::warn!("emit hook_event failed: {}", e);
+            PolicyKind::Agent | PolicyKind::External => {
+                pending().insert(event.id.clone(), tx);
+                let mut enriched = event.clone();
+                enriched.resolved_kind = Some(resolved.kind);
+                enriched.resolved_scope = Some(resolved.scope);
+                queue().insert(event.id.clone(), enriched.clone());
+                crate::delegation_dispatch::dispatch(app.clone(), enriched, resolved.kind).await;
             }
         }
 
         let prefs = crate::app_settings::get();
-        if prefs.toast_enabled && resolved.kind != PolicyKind::Auto {
+        if prefs.toast_enabled && resolved.kind == PolicyKind::Manual {
             let body = format_notification_body(&event);
             let mut builder = app
                 .notification()
