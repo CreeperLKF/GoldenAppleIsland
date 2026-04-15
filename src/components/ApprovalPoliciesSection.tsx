@@ -6,6 +6,7 @@ import PolicyDropdown, { DropdownValue } from "./ui/PolicyDropdown";
 import { resolvePolicy } from "../lib/resolvePolicy";
 import ResolverPanel from "./ResolverPanel";
 import AgentApproveSection from "./AgentApproveSection";
+import ExternalApproveSection from "./ExternalApproveSection";
 import type { PolicyKind, RecentSession } from "../types/events";
 
 const SIMPLE_LABELS = { auto: "Auto", manual: "Manual" };
@@ -341,6 +342,7 @@ export default function ApprovalPoliciesSection() {
       </div>
     </section>
     <AgentApproveSection />
+    <ExternalApproveSection />
     </>
   );
 }
