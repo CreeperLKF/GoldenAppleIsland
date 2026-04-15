@@ -6,11 +6,13 @@ import log from "../lib/log";
 import Header from "./Header";
 import SessionStrip from "./SessionStrip";
 import ApprovalCard from "./ApprovalCard";
+import DelegatedCard from "./DelegatedCard";
 import QuestionCard from "./QuestionCard";
 import EmptyState from "./EmptyState";
 import PolicyPanel from "./PolicyPanel";
 import HistoryList from "./HistoryList";
 import { usePendingEvents } from "../hooks/usePendingEvents";
+import { useDelegatedEvents } from "../hooks/useDelegatedEvents";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useConnection } from "../hooks/useConnection";
 import { useHistory } from "../hooks/useHistory";
@@ -54,6 +56,8 @@ export default function PopupWindow() {
   const { pending, resolving, enqueue, resolve } = usePendingEvents({
     onResolve,
   });
+
+  const { delegated, takeOver } = useDelegatedEvents();
 
   const force = useForceOverrides();
 
@@ -328,7 +332,20 @@ export default function PopupWindow() {
           {sharedCwd && <SessionStrip cwd={sharedCwd} />}
 
           <div className="flex-1 overflow-y-auto">
-            {visible.length === 0 ? (
+            {delegated.length > 0 && (
+              <div className="delegated-list">
+                {delegated.map((d) => (
+                  <DelegatedCard
+                    key={d.event_id}
+                    state={d}
+                    onTakeOver={(id) => {
+                      void takeOver(id);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+            {visible.length === 0 && delegated.length === 0 ? (
               <EmptyState connected={connected} />
             ) : (
               pending.map((event) => {

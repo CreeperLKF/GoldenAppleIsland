@@ -79,6 +79,21 @@ export default function ApprovalCard({
         transitionDuration: "200ms",
       }}
     >
+      {event.delegation_banner && (
+        <div
+          className="delegation-banner"
+          role="note"
+          style={{
+            padding: "6px 12px",
+            fontSize: 11,
+            background: "var(--badge-permission-bg)",
+            color: "var(--badge-permission-text)",
+            borderBottom: "0.5px solid var(--border)",
+          }}
+        >
+          {event.delegation_banner}
+        </div>
+      )}
       <div style={{ padding: "10px 12px" }}>
         <div className="flex items-center justify-between">
           <span
