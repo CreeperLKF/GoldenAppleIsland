@@ -66,6 +66,15 @@ pub struct HookEvent {
     pub resolved_kind: Option<PolicyKind>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resolved_scope: Option<PolicyScope>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delegation_banner: Option<String>,
+}
+
+pub(crate) fn enqueue_event_as_manual(app: &AppHandle, event: HookEvent) {
+    queue().insert(event.id.clone(), event.clone());
+    if let Err(e) = app.emit("hook_event", event) {
+        log::warn!("emit hook_event failed: {}", e);
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

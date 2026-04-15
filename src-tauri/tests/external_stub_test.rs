@@ -23,6 +23,7 @@ fn sample_event() -> HookEvent {
         timestamp: "2026-04-16T00:00:00Z".into(),
         resolved_kind: None,
         resolved_scope: None,
+        delegation_banner: None,
     }
 }
 

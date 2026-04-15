@@ -132,6 +132,8 @@ pub enum DecisionSource {
     Policy,
     Force,
     Auto,
+    Agent,
+    External,
 }
 
 use std::fs::{self, OpenOptions};
@@ -231,6 +233,8 @@ impl DecisionSource {
             DecisionSource::Policy => "policy",
             DecisionSource::Force => "force",
             DecisionSource::Auto => "auto",
+            DecisionSource::Agent => "agent",
+            DecisionSource::External => "external",
         }
     }
 }

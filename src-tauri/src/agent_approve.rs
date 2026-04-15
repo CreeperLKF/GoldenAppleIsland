@@ -489,6 +489,7 @@ mod tests {
             timestamp: "2026-04-16T10:30:00Z".into(),
             resolved_kind: None,
             resolved_scope: None,
+            delegation_banner: None,
         };
         let prompt = build_prompt(&event);
         assert!(prompt.contains("session_id: sess_def456"));
@@ -517,6 +518,7 @@ mod tests {
             timestamp: "2026-04-16T00:00:00Z".into(),
             resolved_kind: None,
             resolved_scope: None,
+            delegation_banner: None,
         };
         let prompt = build_prompt(&event);
         assert!(prompt.contains("tool_name: write"));
@@ -548,6 +550,7 @@ mod tests {
             timestamp: "2026-04-16T00:00:00Z".into(),
             resolved_kind: None,
             resolved_scope: None,
+            delegation_banner: None,
         };
         let prompt = build_prompt(&event);
         assert!(prompt.contains("tool_input: |"));

@@ -217,6 +217,7 @@ mod tests {
             timestamp: "2026-04-13T00:00:00Z".into(),
             resolved_kind: None,
             resolved_scope: None,
+            delegation_banner: None,
         }
     }
 
