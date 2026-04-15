@@ -5,6 +5,7 @@ mod file_logger;
 mod path_norm;
 mod policy;
 mod session_ctx;
+mod verdict;
 mod ws;
 mod wsl_admin;
 mod windows_hook;

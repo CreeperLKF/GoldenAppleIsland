@@ -1543,6 +1543,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-global-shortcut",
  "tauri-plugin-notification",
+ "thiserror 1.0.69",
  "tokio",
  "tokio-tungstenite",
  "uuid",
