@@ -90,37 +90,14 @@ required JSON verdict.\n\n",
     out.push_str(&format!("  session_cwd: {}\n", event.session_cwd));
     out.push_str(&format!("  source_distro: {}\n", event.source_distro));
     out.push_str(&format!("  tool_name: {}\n", event.tool_name));
-    out.push_str("  tool_input:\n");
-    render_tool_input(&mut out, &event.tool_input, 4);
+    out.push_str("  tool_input: |\n");
+    let pretty =
+        serde_json::to_string_pretty(&event.tool_input).unwrap_or_else(|_| "{}".to_string());
+    for line in pretty.lines() {
+        out.push_str(&format!("    {}\n", line));
+    }
     out.push_str(&format!("  timestamp: {}\n", event.timestamp));
     out
-}
-
-fn render_tool_input(out: &mut String, value: &serde_json::Value, indent: usize) {
-    let pad = " ".repeat(indent);
-    match value {
-        serde_json::Value::Object(map) => {
-            for (k, v) in map {
-                match v {
-                    serde_json::Value::String(s) if s.contains('\n') || s.len() > 20 => {
-                        out.push_str(&format!("{}{}: |\n", pad, k));
-                        for line in s.lines() {
-                            out.push_str(&format!("{}  {}\n", pad, line));
-                        }
-                    }
-                    serde_json::Value::String(s) => {
-                        out.push_str(&format!("{}{}: {}\n", pad, k, s));
-                    }
-                    other => {
-                        out.push_str(&format!("{}{}: {}\n", pad, k, other));
-                    }
-                }
-            }
-        }
-        other => {
-            out.push_str(&format!("{}{}\n", pad, other));
-        }
-    }
 }
 
 use std::sync::{Mutex, OnceLock};
@@ -455,9 +432,9 @@ mod tests {
         assert!(prompt.contains("session_id: sess_def456"));
         assert!(prompt.contains("source_distro: Ubuntu"));
         assert!(prompt.contains("tool_name: bash"));
+        assert!(prompt.contains("tool_input: |"));
+        assert!(prompt.contains("\"command\""));
         assert!(prompt.contains("rm -rf ./dist"));
-        // Literal block scalar for commands
-        assert!(prompt.contains("command: |"));
     }
 
     #[test]
@@ -481,9 +458,41 @@ mod tests {
         };
         let prompt = build_prompt(&event);
         assert!(prompt.contains("tool_name: write"));
-        assert!(prompt.contains("file_path: src/x.ts"));
-        assert!(prompt.contains("content: |"));
-        assert!(prompt.contains("line1"));
+        assert!(prompt.contains("tool_input: |"));
+        assert!(prompt.contains("\"file_path\""));
+        assert!(prompt.contains("\"src/x.ts\""));
+        assert!(prompt.contains("\"content\""));
+        assert!(prompt.contains("line1\\nline2\\n"));
+    }
+
+    #[test]
+    fn build_prompt_handles_nested_tool_input() {
+        use crate::ws::HookEvent;
+        let event = HookEvent {
+            r#type: "hook_event".into(),
+            id: "evt_nested".into(),
+            session_id: "s".into(),
+            session_cwd: "/w".into(),
+            source_distro: "Ubuntu".into(),
+            hook_type: "pre_tool_use".into(),
+            tool_name: "multi_edit".into(),
+            tool_input: serde_json::json!({
+                "file_path": "src/x.ts",
+                "edits": [
+                    { "old_string": "first\nline", "new_string": "replaced" },
+                    { "old_string": "other", "new_string": "also" }
+                ]
+            }),
+            timestamp: "2026-04-16T00:00:00Z".into(),
+            resolved_kind: None,
+            resolved_scope: None,
+        };
+        let prompt = build_prompt(&event);
+        assert!(prompt.contains("tool_input: |"));
+        assert!(prompt.contains("\"edits\""));
+        assert!(prompt.contains("\"old_string\""));
+        // Pretty JSON indentation preserved under the block scalar
+        assert!(prompt.contains("    {\n"));
     }
 
     #[test]
