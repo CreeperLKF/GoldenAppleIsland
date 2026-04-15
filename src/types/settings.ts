@@ -1,4 +1,6 @@
-export type SettingsTabId = "general" | "approval" | "hooks";
+import type { HookTargetConfig, WorkingMode } from "./modes";
+
+export type SettingsTabId = "general" | "approval" | "hooks" | "audit";
 
 export interface PopupPosition {
   x: number;
@@ -20,6 +22,12 @@ export interface AppSettings {
   recent_collapsed: boolean;
   hotkey_toggle_window: string;
   hotkey_approve_all: string;
+  default_mode: WorkingMode;
+  windows_hook_config: HookTargetConfig;
+  wsl_hook_configs: Record<string, HookTargetConfig>;
+  audit_history_enabled: boolean;
+  max_dynamic_sessions: number;
+  audit_skip_unpinned_delete_confirm: boolean;
 }
 
 export interface CachedHookStatus {
