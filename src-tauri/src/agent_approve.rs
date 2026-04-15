@@ -189,6 +189,139 @@ pub fn record_turn_with_workspace(session_id: &str, workspace_path: PathBuf) {
     }
 }
 
+use std::time::Duration;
+use tokio::process::Command;
+use tokio::sync::Mutex as AsyncMutex;
+
+use crate::verdict::{self, Verdict, VerdictParseError};
+
+/// Global mutex serializing every agent call. Required because `--resume`
+/// cannot tolerate concurrent writers on the same session_id.
+static AGENT_MUTEX: OnceLock<AsyncMutex<()>> = OnceLock::new();
+fn agent_mutex() -> &'static AsyncMutex<()> {
+    AGENT_MUTEX.get_or_init(|| AsyncMutex::new(()))
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum AgentCallError {
+    #[error("agent workspace is not configured")]
+    NotConfigured,
+    #[error("workspace directory missing: {0}")]
+    WorkspaceMissing(String),
+    #[error("CLAUDE.md missing at {0}")]
+    ClaudeMdMissing(String),
+    #[error("failed to spawn claude.exe: {0}")]
+    SpawnFailed(String),
+    #[error("claude.exe exited with status {0}: {1}")]
+    NonZeroExit(i32, String),
+    #[error("agent call timed out after {0}s")]
+    Timeout(u32),
+    #[error("claude returned malformed envelope JSON: {0}")]
+    MalformedEnvelope(String),
+    #[error("malformed verdict: {0}")]
+    MalformedVerdict(String),
+}
+
+/// Shape of `claude -p --output-format json` output.
+#[derive(Debug, Deserialize)]
+struct ClaudeEnvelope {
+    #[serde(default)]
+    session_id: Option<String>,
+    #[serde(default)]
+    result: Option<String>,
+    #[serde(default, rename = "is_error")]
+    is_error: bool,
+    #[serde(default)]
+    error: Option<String>,
+}
+
+/// Spawn `claude.exe` with the stored session_id (or start fresh), parse the
+/// envelope, extract the verdict. Caller holds no locks on the agent mutex.
+pub async fn run_agent_call(
+    prompt: &str,
+    workspace: &Path,
+    call_timeout_secs: u32,
+    turn_limit: u32,
+) -> Result<Verdict, AgentCallError> {
+    // Validate workspace up front
+    if !workspace.is_dir() {
+        return Err(AgentCallError::WorkspaceMissing(
+            workspace.display().to_string(),
+        ));
+    }
+    if !workspace_has_claude_md(workspace) {
+        return Err(AgentCallError::ClaudeMdMissing(
+            workspace.display().to_string(),
+        ));
+    }
+
+    let _permit = agent_mutex().lock().await;
+
+    // Rollover: if already at/over the limit, clear so --resume is omitted.
+    if should_rollover_before_next_call(turn_limit) {
+        clear_session();
+    }
+    let resume_id = snapshot_session().map(|s| s.session_id);
+
+    let mut cmd = Command::new("claude.exe");
+    cmd.arg("-p")
+        .arg(prompt)
+        .arg("--output-format")
+        .arg("json")
+        .arg("--cwd")
+        .arg(workspace);
+    if let Some(id) = resume_id.as_ref() {
+        cmd.arg("--resume").arg(id);
+    }
+    cmd.stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .kill_on_drop(true);
+
+    let child_future = cmd.output();
+    let output = tokio::time::timeout(Duration::from_secs(call_timeout_secs as u64), child_future)
+        .await
+        .map_err(|_| AgentCallError::Timeout(call_timeout_secs))?
+        .map_err(|e| AgentCallError::SpawnFailed(e.to_string()))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        log::warn!("agent call non-zero exit: {}", stderr);
+        return Err(AgentCallError::NonZeroExit(
+            output.status.code().unwrap_or(-1),
+            stderr.chars().take(400).collect::<String>(),
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let envelope: ClaudeEnvelope = serde_json::from_str(&stdout)
+        .map_err(|e| AgentCallError::MalformedEnvelope(e.to_string()))?;
+    if envelope.is_error {
+        return Err(AgentCallError::MalformedEnvelope(
+            envelope.error.unwrap_or_else(|| "is_error=true".to_string()),
+        ));
+    }
+    let result_text = envelope
+        .result
+        .ok_or_else(|| AgentCallError::MalformedEnvelope("missing 'result' field".into()))?;
+
+    let parsed = verdict::parse_strict(&result_text).map_err(|e| match e {
+        VerdictParseError::NotStrictJson => {
+            AgentCallError::MalformedVerdict("not strict JSON".into())
+        }
+        VerdictParseError::MalformedJson(m) | VerdictParseError::UnknownKind(m) => {
+            AgentCallError::MalformedVerdict(m)
+        }
+        VerdictParseError::Empty => AgentCallError::MalformedVerdict("empty".into()),
+    })?;
+
+    if let Some(sid) = envelope.session_id {
+        record_turn_with_workspace(&sid, workspace.to_path_buf());
+    }
+
+    Ok(parsed)
+}
+
 #[cfg(test)]
 pub(crate) fn record_turn(session_id: &str) {
     record_turn_with_workspace(session_id, PathBuf::from("."));
