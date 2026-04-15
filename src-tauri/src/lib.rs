@@ -10,6 +10,7 @@ mod session_ctx;
 pub mod verdict;
 pub mod ws;
 pub mod delegation;
+mod delegation_dispatch;
 mod wsl_admin;
 mod windows_hook;
 mod hook_modes;
