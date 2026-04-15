@@ -6,6 +6,53 @@ use crate::ws::HookEvent;
 
 pub const SESSION_RULE_CAP: usize = 5;
 
+fn default_agent_turn_limit() -> u32 { 20 }
+fn default_agent_timeout_secs() -> u32 { 60 }
+fn default_external_timeout_secs() -> u32 { 30 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentApproveConfig {
+    #[serde(default)]
+    pub workspace_path: Option<std::path::PathBuf>,
+    #[serde(default)]
+    pub is_default_workspace: bool,
+    #[serde(default = "default_agent_turn_limit")]
+    pub turn_limit: u32,
+    #[serde(default = "default_agent_timeout_secs")]
+    pub call_timeout_secs: u32,
+}
+
+impl Default for AgentApproveConfig {
+    fn default() -> Self {
+        Self {
+            workspace_path: None,
+            is_default_workspace: false,
+            turn_limit: default_agent_turn_limit(),
+            call_timeout_secs: default_agent_timeout_secs(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExternalApproveConfig {
+    #[serde(default)]
+    pub endpoint_url: Option<String>,
+    #[serde(default)]
+    pub auth_header: Option<String>,
+    #[serde(default = "default_external_timeout_secs")]
+    pub call_timeout_secs: u32,
+}
+
+impl Default for ExternalApproveConfig {
+    fn default() -> Self {
+        Self {
+            endpoint_url: None,
+            auth_header: None,
+            call_timeout_secs: default_external_timeout_secs(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum PolicyKind {
@@ -54,6 +101,10 @@ pub struct ApprovalPolicies {
     pub per_folder: HashMap<String, PolicyRule>,
     #[serde(default)]
     pub per_session: Vec<SessionRule>,
+    #[serde(default)]
+    pub agent_config: AgentApproveConfig,
+    #[serde(default)]
+    pub external_config: ExternalApproveConfig,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -280,6 +331,25 @@ mod tests {
         let r = resolve(&ev, &ctx, &policies);
         assert_eq!(r.kind, PolicyKind::Manual);
         assert_eq!(r.scope, PolicyScope::Session);
+    }
+
+    #[test]
+    fn approval_policies_has_default_agent_and_external_configs() {
+        let p = ApprovalPolicies::default();
+        assert!(p.agent_config.workspace_path.is_none());
+        assert!(!p.agent_config.is_default_workspace);
+        assert_eq!(p.agent_config.turn_limit, 20);
+        assert_eq!(p.agent_config.call_timeout_secs, 60);
+        assert!(p.external_config.endpoint_url.is_none());
+        assert_eq!(p.external_config.call_timeout_secs, 30);
+    }
+
+    #[test]
+    fn approval_policies_loads_old_json_without_new_fields() {
+        let json = r#"{"global":"manual","per_distro":{},"per_folder":{},"per_session":[]}"#;
+        let p: ApprovalPolicies = serde_json::from_str(json).unwrap();
+        assert!(p.agent_config.workspace_path.is_none());
+        assert!(p.external_config.endpoint_url.is_none());
     }
 
     #[test]
