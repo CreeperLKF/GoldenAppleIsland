@@ -71,19 +71,14 @@ impl HookEventKind {
     ];
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkingMode {
     Control,
+    #[default]
     Audit,
     Observe,
     Custom,
-}
-
-impl Default for WorkingMode {
-    fn default() -> Self {
-        WorkingMode::Audit
-    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -110,21 +105,12 @@ pub struct CustomHookSet {
     pub session_end: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct HookTargetConfig {
     #[serde(default)]
     pub mode: WorkingMode,
     #[serde(default)]
     pub custom: CustomHookSet,
-}
-
-impl Default for HookTargetConfig {
-    fn default() -> Self {
-        Self {
-            mode: WorkingMode::default(),
-            custom: CustomHookSet::default(),
-        }
-    }
 }
 
 /// Compute the event set this config should register. Tests live in Task 2.
