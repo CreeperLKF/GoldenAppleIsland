@@ -13,6 +13,17 @@ const EMPTY: ApprovalPolicies = {
   per_distro: {},
   per_folder: {},
   per_session: [],
+  agent_config: {
+    workspace_path: null,
+    is_default_workspace: false,
+    turn_limit: 0,
+    call_timeout_secs: 0,
+  },
+  external_config: {
+    endpoint_url: null,
+    auth_header: null,
+    call_timeout_secs: 0,
+  },
 };
 
 export function useApprovalPolicies() {

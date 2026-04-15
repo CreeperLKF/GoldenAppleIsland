@@ -1,7 +1,14 @@
+import type {
+  AgentApproveConfig,
+  ExternalApproveConfig,
+} from "./settings";
+
 export type HookType = "pre_tool_use" | "permission_request";
 
-export type PolicyKind = "manual" | "auto";
+export type PolicyKind = "manual" | "auto" | "agent" | "external";
 export type PolicyScope = "global" | "distro" | "folder" | "session";
+
+export type DelegationKind = "agent" | "external";
 
 export interface HookEvent {
   type: "hook_event";
@@ -16,6 +23,26 @@ export interface HookEvent {
   /** Set by the backend before emit; absent for events read from raw WS. */
   resolved_kind?: PolicyKind;
   resolved_scope?: PolicyScope;
+  delegation_banner?: string | null;
+}
+
+export interface HookEventDelegatedPayload {
+  event: HookEvent;
+  kind: DelegationKind;
+  scope: PolicyScope;
+}
+
+export interface DelegationResolvedPayload {
+  event_id: string;
+  action: "approve" | "deny" | "escalated" | "failed" | "takenover";
+  source: DelegationKind | "policy";
+  reason?: string | null;
+}
+
+export interface DelegatedSummary {
+  event_id: string;
+  kind: DelegationKind;
+  started_at_ms: number;
 }
 
 export interface PolicyRule {
@@ -37,6 +64,8 @@ export interface ApprovalPolicies {
   per_distro: Record<string, PolicyRule>;
   per_folder: Record<string, PolicyRule>;
   per_session: SessionRule[];
+  agent_config: AgentApproveConfig;
+  external_config: ExternalApproveConfig;
 }
 
 export interface RecentSession {

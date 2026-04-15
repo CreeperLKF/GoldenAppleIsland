@@ -57,3 +57,22 @@ export interface BulkResult {
   ok: boolean;
   error: string | null;
 }
+
+export interface AgentApproveConfig {
+  workspace_path: string | null;
+  is_default_workspace: boolean;
+  turn_limit: number;
+  call_timeout_secs: number;
+}
+
+export interface ExternalApproveConfig {
+  endpoint_url: string | null;
+  auth_header: string | null;
+  call_timeout_secs: number;
+}
+
+export interface AgentSessionSnapshot {
+  session_id: string;
+  turn_count: number;
+  workspace_path: string;
+}
