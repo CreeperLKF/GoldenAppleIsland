@@ -1,4 +1,4 @@
-mod agent_approve;
+pub mod agent_approve;
 mod app_settings;
 mod audit_history;
 mod commands;
@@ -6,7 +6,7 @@ mod file_logger;
 mod path_norm;
 mod policy;
 mod session_ctx;
-mod verdict;
+pub mod verdict;
 mod ws;
 mod wsl_admin;
 mod windows_hook;
