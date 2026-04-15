@@ -1,3 +1,4 @@
+mod agent_approve;
 mod app_settings;
 mod audit_history;
 mod commands;
