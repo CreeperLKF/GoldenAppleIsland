@@ -54,13 +54,16 @@ export default function PolicyDropdown({
   const externalLabel = labels?.external ?? "External";
   const inheritLabel = labels?.inherit ?? "Use inherited";
 
-  const handleChange = (next: DropdownValue) => {
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const next = e.target.value as DropdownValue;
     if (next === "agent" && !agentConfigured) {
-      if (onRequestConfigure) onRequestConfigure("agent");
+      e.target.value = value;
+      onRequestConfigure?.("agent");
       return;
     }
     if (next === "external" && !externalConfigured) {
-      if (onRequestConfigure) onRequestConfigure("external");
+      e.target.value = value;
+      onRequestConfigure?.("external");
       return;
     }
     onChange(next);
@@ -71,7 +74,7 @@ export default function PolicyDropdown({
       aria-label={ariaLabel}
       value={value}
       disabled={disabled}
-      onChange={(e) => handleChange(e.target.value as DropdownValue)}
+      onChange={handleChange}
       className="rounded bg-[var(--bg-surface)] text-[var(--text-primary)] hover:brightness-95 disabled:opacity-40"
       style={{
         height,
@@ -87,7 +90,6 @@ export default function PolicyDropdown({
       <option value="manual">{manualLabel}</option>
       <option
         value="agent"
-        disabled={!agentConfigured}
         title={
           !agentConfigured
             ? "Configure in Settings → Approval Policies → Agent Approve"
@@ -99,7 +101,6 @@ export default function PolicyDropdown({
       </option>
       <option
         value="external"
-        disabled={!externalConfigured}
         title={
           !externalConfigured
             ? "Configure in Settings → Approval Policies → External Approve"

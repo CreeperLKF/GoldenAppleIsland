@@ -30,7 +30,8 @@ function middleEllipsis(s: string, max: number): string {
 }
 
 function describeInput(input: unknown): string {
-  if (input && typeof input === "object") {
+  if (input == null) return "";
+  if (typeof input === "object") {
     const obj = input as Record<string, unknown>;
     if (typeof obj.command === "string") {
       const cmd = obj.command;
@@ -41,6 +42,7 @@ function describeInput(input: unknown): string {
   }
   try {
     const s = JSON.stringify(input);
+    if (s === "null") return "";
     return s.length > 60 ? `${s.slice(0, 60)}…` : s;
   } catch {
     return "";
@@ -58,7 +60,8 @@ export default function DelegatedCard({ state, onTakeOver }: DelegatedCardProps)
   const elapsed = formatElapsed(tick - state.started_at_ms);
   const label =
     state.kind === "agent" ? "Agent deciding…" : "External deciding…";
-  const body = describeInput(state.tool_input) || state.tool_name;
+  const rawBody = describeInput(state.tool_input);
+  const body = rawBody || state.tool_name || "(in flight — details unavailable)";
   const cwdDisplay = middleEllipsis(state.session_cwd || "", 35);
 
   return (

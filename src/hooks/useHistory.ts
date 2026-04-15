@@ -71,12 +71,19 @@ export function useHistory() {
         // manual history on resolution.
         if (action !== "approve" && action !== "deny") return;
         if (source !== "agent" && source !== "external") return;
+        if (meta == null) {
+          log.warn(
+            "delegation_resolved for unknown event_id, skipping history row",
+            event_id,
+          );
+          return;
+        }
         setItems((prev) => {
           const next: HistoryEntry[] = [
             {
               id: event_id,
-              tool_name: meta?.tool_name ?? "",
-              summary: meta?.summary ?? "",
+              tool_name: meta.tool_name,
+              summary: meta.summary,
               action,
               timestamp: new Date().toISOString(),
               source,
