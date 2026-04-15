@@ -30,7 +30,7 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - name: Build Tauri app (msi + nsis)
+      - name: Build Tauri app (nsis)
         run: npm run tauri:build
 
       - name: Bundle WSL distribution
@@ -40,7 +40,6 @@ jobs:
         shell: bash
         run: |
           mkdir -p artifacts
-          cp src-tauri/target/release/bundle/msi/*.msi artifacts/ || true
           cp src-tauri/target/release/bundle/nsis/*.exe artifacts/ || true
           cp dist-wsl/*.tar.gz artifacts/ || true
           ls -la artifacts/

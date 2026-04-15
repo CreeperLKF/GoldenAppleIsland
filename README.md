@@ -21,7 +21,7 @@ Anyone who runs Claude Code on Windows — natively, through WSL, or over SSH (c
 
 ## Quick start
 
-1. **Install the app.** Grab the latest `.msi` from [GitHub Releases](https://github.com/CreeperLKF/GoldenAppleIsland/releases), run it, and launch **Golden Apple Island** from the Start menu — it appears in your system tray.
+1. **Install the app.** Grab the latest `-setup.exe` from [GitHub Releases](https://github.com/CreeperLKF/GoldenAppleIsland/releases), run it (no admin needed — it installs per-user), and launch **Golden Apple Island** from the Start menu — it appears in your system tray.
 2. **Enable your WSL distros.** Right-click the tray icon → **Settings → Hook Management → WSL Instances → Enable all**. The app installs the hook into every distribution and registers it in `~/.claude/settings.json` for you.
 3. **Try it.** Run `claude` in any WSL shell and have it do something that needs a tool call. A Windows toast pops up and the tray shows an approval card — click ✓ or ✗ and the session unblocks.
 
@@ -29,7 +29,7 @@ Anyone who runs Claude Code on Windows — natively, through WSL, or over SSH (c
 
 ## Install
 
-**From a release (recommended).** Follow **Quick start** above — one `.msi` covers everything.
+**From a release (recommended).** Follow **Quick start** above — one `-setup.exe` covers everything.
 
 **From source.** Clone and build on Windows:
 
@@ -40,7 +40,7 @@ npm install
 npm run tauri build
 ```
 
-The `.msi` lands in `src-tauri/target/release/bundle/msi/`. Install it, launch the app, and enable your WSL distros from **Settings → Hook Management → WSL Instances → Enable all** exactly as in Quick start.
+The setup.exe lands in `src-tauri/target/release/bundle/nsis/`. Run it, launch the app, and enable your WSL distros from **Settings → Hook Management → WSL Instances → Enable all** exactly as in Quick start.
 
 Prerequisites: Node 20+, Rust via `rustup`, and the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for Windows (MSVC build tools + WebView2).
 
