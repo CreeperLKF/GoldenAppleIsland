@@ -1,13 +1,15 @@
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Window};
 
+use crate::agent_approve::{self, AgentSessionSnapshot};
 use crate::app_settings::{self, AppSettings};
 use crate::audit_history::{self, AuditIndex, EventRecord};
 use crate::file_logger;
 use crate::hook_modes::{HookTargetConfig, WorkingMode};
 use crate::path_norm;
 use crate::policy::{
-    self, ApprovalPolicies, PolicyKind, PolicyRule, SessionRule, SESSION_RULE_CAP,
+    self, AgentApproveConfig, ApprovalPolicies, PolicyKind, PolicyRule, SessionRule,
+    SESSION_RULE_CAP,
 };
 use crate::session_ctx;
 use crate::ws;
@@ -489,3 +491,85 @@ pub fn set_audit_skip_unpinned_delete_confirm(value: bool) -> AppSettings {
     current.audit_skip_unpinned_delete_confirm = value;
     app_settings::set(current)
 }
+
+// -------- Agent Approve config commands (Phase 5 / Task 17) --------
+
+#[derive(Debug, Default, serde::Deserialize)]
+pub struct AgentConfigPatch {
+    #[serde(default)]
+    pub workspace_path: Option<String>,
+    #[serde(default)]
+    pub turn_limit: Option<u32>,
+    #[serde(default)]
+    pub call_timeout_secs: Option<u32>,
+    #[serde(default)]
+    pub clear_workspace: bool,
+}
+
+#[tauri::command]
+pub fn get_agent_config() -> AgentApproveConfig {
+    app_settings::get().approval_policies.agent_config
+}
+
+#[tauri::command]
+pub async fn set_agent_config(patch: AgentConfigPatch, app: AppHandle) -> Result<(), String> {
+    write_policies(&app, |p| {
+        if patch.clear_workspace {
+            p.agent_config.workspace_path = None;
+            p.agent_config.is_default_workspace = false;
+        } else if let Some(path_str) = patch.workspace_path {
+            let path = std::path::PathBuf::from(&path_str);
+            p.agent_config.is_default_workspace =
+                agent_approve::is_default_gai_workspace(&path);
+            p.agent_config.workspace_path = Some(path);
+        }
+        if let Some(tl) = patch.turn_limit {
+            p.agent_config.turn_limit = tl.max(1);
+        }
+        if let Some(ts) = patch.call_timeout_secs {
+            p.agent_config.call_timeout_secs = ts.max(5);
+        }
+    })
+}
+
+#[tauri::command]
+pub async fn use_default_agent_workspace(app: AppHandle) -> Result<AgentApproveConfig, String> {
+    let dir = agent_approve::install_default_workspace().await?;
+    write_policies(&app, |p| {
+        p.agent_config.workspace_path = Some(dir.clone());
+        p.agent_config.is_default_workspace = true;
+    })?;
+    Ok(app_settings::get().approval_policies.agent_config)
+}
+
+#[tauri::command]
+pub async fn reset_default_agent_workspace(
+    app: AppHandle,
+) -> Result<AgentApproveConfig, String> {
+    let current = app_settings::get().approval_policies.agent_config.clone();
+    if !current.is_default_workspace {
+        return Err("reset only works on the default workspace".to_string());
+    }
+    if let Some(dir) = current.workspace_path.as_ref() {
+        if dir.exists() {
+            agent_approve::nuke_default_workspace(dir).map_err(|e| e.to_string())?;
+        }
+    }
+    let dir = agent_approve::install_default_workspace().await?;
+    write_policies(&app, |p| {
+        p.agent_config.workspace_path = Some(dir.clone());
+        p.agent_config.is_default_workspace = true;
+    })?;
+    Ok(app_settings::get().approval_policies.agent_config)
+}
+
+#[tauri::command]
+pub fn reset_agent_session() {
+    agent_approve::clear_session();
+}
+
+#[tauri::command]
+pub fn get_agent_session_snapshot() -> Option<AgentSessionSnapshot> {
+    agent_approve::snapshot_session()
+}
+
