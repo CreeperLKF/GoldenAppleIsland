@@ -4,14 +4,16 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Windo
 use crate::agent_approve::{self, AgentSessionSnapshot};
 use crate::app_settings::{self, AppSettings};
 use crate::audit_history::{self, AuditIndex, EventRecord};
+use crate::external_approve;
 use crate::file_logger;
 use crate::hook_modes::{HookTargetConfig, WorkingMode};
 use crate::path_norm;
 use crate::policy::{
-    self, AgentApproveConfig, ApprovalPolicies, PolicyKind, PolicyRule, SessionRule,
-    SESSION_RULE_CAP,
+    self, AgentApproveConfig, ApprovalPolicies, ExternalApproveConfig, PolicyKind, PolicyRule,
+    SessionRule, SESSION_RULE_CAP,
 };
 use crate::session_ctx;
+use crate::verdict::Verdict;
 use crate::ws;
 use crate::wsl_admin::{self, BulkResult, HookStatus, WslDistroWithStatus};
 
@@ -571,5 +573,97 @@ pub fn reset_agent_session() {
 #[tauri::command]
 pub fn get_agent_session_snapshot() -> Option<AgentSessionSnapshot> {
     agent_approve::snapshot_session()
+}
+
+// -------- External Approve config commands (Phase 5 / Task 18) --------
+
+#[derive(Debug, Default, serde::Deserialize)]
+pub struct ExternalConfigPatch {
+    #[serde(default)]
+    pub endpoint_url: Option<String>,
+    #[serde(default)]
+    pub auth_header: Option<String>,
+    #[serde(default)]
+    pub call_timeout_secs: Option<u32>,
+    #[serde(default)]
+    pub clear_endpoint: bool,
+}
+
+#[tauri::command]
+pub fn get_external_config() -> ExternalApproveConfig {
+    app_settings::get().approval_policies.external_config
+}
+
+#[tauri::command]
+pub async fn set_external_config(
+    patch: ExternalConfigPatch,
+    app: AppHandle,
+) -> Result<(), String> {
+    // Validate before mutating state.
+    if let Some(url) = patch.endpoint_url.as_ref() {
+        reqwest::Url::parse(url).map_err(|_| format!("invalid URL: {}", url))?;
+    }
+    if let Some(h) = patch.auth_header.as_ref() {
+        if !h.is_empty() {
+            external_approve::split_header(h).map_err(|e| e.to_string())?;
+        }
+    }
+
+    write_policies(&app, |p| {
+        if patch.clear_endpoint {
+            p.external_config.endpoint_url = None;
+            p.external_config.auth_header = None;
+        } else {
+            if let Some(url) = patch.endpoint_url {
+                p.external_config.endpoint_url = Some(url);
+            }
+            if let Some(h) = patch.auth_header {
+                p.external_config.auth_header = if h.is_empty() { None } else { Some(h) };
+            }
+        }
+        if let Some(ts) = patch.call_timeout_secs {
+            p.external_config.call_timeout_secs = ts.max(5);
+        }
+    })
+}
+
+#[tauri::command]
+pub async fn test_external_endpoint() -> Result<Verdict, String> {
+    let cfg = app_settings::get().approval_policies.external_config;
+    let url = cfg
+        .endpoint_url
+        .ok_or_else(|| "external endpoint is not configured".to_string())?;
+    let probe = ws::HookEvent {
+        r#type: "hook_event".to_string(),
+        id: "probe".to_string(),
+        session_id: "probe".to_string(),
+        session_cwd: "probe".to_string(),
+        source_distro: "probe".to_string(),
+        hook_type: "pre_tool_use".to_string(),
+        tool_name: "probe".to_string(),
+        tool_input: serde_json::json!({ "command": "probe" }),
+        timestamp: chrono::Utc::now().to_rfc3339(),
+        resolved_kind: None,
+        resolved_scope: None,
+        delegation_banner: None,
+    };
+    external_approve::run_external_call(
+        &url,
+        cfg.auth_header.as_deref(),
+        &probe,
+        cfg.call_timeout_secs,
+    )
+    .await
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn take_over_delegated(event_id: String, app: AppHandle) -> Result<(), String> {
+    crate::delegation_dispatch::take_over(app, event_id).await
+}
+
+#[tauri::command]
+pub fn list_delegated() -> Vec<crate::delegation::DelegatedSummary> {
+    crate::delegation::snapshot()
 }
 

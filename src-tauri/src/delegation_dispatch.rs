@@ -286,7 +286,6 @@ fn short(s: &str) -> String {
 
 /// Cancel an in-flight delegation and push the original event onto the manual
 /// pending queue with a "Taken over" banner.
-#[allow(dead_code)]
 pub async fn take_over(app: AppHandle, event_id: String) -> Result<(), String> {
     let handle = delegation::remove(&event_id)
         .ok_or_else(|| format!("no delegation in flight for {}", event_id))?;

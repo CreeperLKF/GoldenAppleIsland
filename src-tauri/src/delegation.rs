@@ -49,7 +49,6 @@ pub fn remove(event_id: &str) -> Option<DelegationHandle> {
     cell().remove(event_id).map(|(_, v)| v)
 }
 
-#[allow(dead_code)]
 pub fn snapshot() -> Vec<DelegatedSummary> {
     cell()
         .iter()
