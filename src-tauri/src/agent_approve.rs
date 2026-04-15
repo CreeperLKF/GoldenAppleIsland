@@ -373,6 +373,7 @@ pub async fn run_agent_call(
 pub async fn download_alice_claude_md() -> Result<String, String> {
     let resp = reqwest::Client::builder()
         .user_agent("golden-apple-island")
+        .timeout(Duration::from_secs(30))
         .build()
         .map_err(|e| e.to_string())?
         .get(ALICE_URL)
