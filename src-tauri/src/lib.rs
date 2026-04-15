@@ -74,6 +74,17 @@ pub fn run() {
             commands::promote_session_to_folder,
             commands::list_recent_sessions,
             commands::set_hotkey,
+            commands::audit_list,
+            commands::audit_read_session,
+            commands::audit_pin_folder,
+            commands::audit_unpin_folder,
+            commands::audit_pin_session,
+            commands::audit_unpin_session,
+            commands::audit_delete_session,
+            commands::audit_delete_folder,
+            commands::set_audit_enabled,
+            commands::set_max_dynamic_sessions,
+            commands::set_audit_skip_unpinned_delete_confirm,
         ])
         .setup(|app| {
             let show_item = CheckMenuItem::with_id(app, "show", "Show", true, false, None::<&str>)?;

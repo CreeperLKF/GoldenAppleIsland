@@ -2,6 +2,7 @@ use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Window};
 
 use crate::app_settings::{self, AppSettings};
+use crate::audit_history::{self, AuditIndex, EventRecord};
 use crate::file_logger;
 use crate::hook_modes::{HookTargetConfig, WorkingMode};
 use crate::path_norm;
@@ -424,4 +425,67 @@ pub async fn set_wsl_hook_config(distro: String, config: HookTargetConfig) -> Re
         wsl_admin::apply_config(&distro, &config).await?;
     }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn audit_list() -> AuditIndex {
+    audit_history::get_index().await
+}
+
+#[tauri::command]
+pub fn audit_read_session(folder_hash: String, session_id: String) -> Vec<EventRecord> {
+    audit_history::read_session_records(&folder_hash, &session_id)
+}
+
+#[tauri::command]
+pub async fn audit_pin_folder(folder_hash: String) {
+    audit_history::set_folder_pinned(&folder_hash, true).await;
+}
+
+#[tauri::command]
+pub async fn audit_unpin_folder(folder_hash: String) {
+    audit_history::set_folder_pinned(&folder_hash, false).await;
+}
+
+#[tauri::command]
+pub async fn audit_pin_session(folder_hash: String, session_id: String) {
+    audit_history::set_session_pinned(&folder_hash, &session_id, true).await;
+}
+
+#[tauri::command]
+pub async fn audit_unpin_session(folder_hash: String, session_id: String) {
+    audit_history::set_session_pinned(&folder_hash, &session_id, false).await;
+}
+
+#[tauri::command]
+pub async fn audit_delete_session(folder_hash: String, session_id: String) {
+    audit_history::delete_session(&folder_hash, &session_id).await;
+}
+
+#[tauri::command]
+pub async fn audit_delete_folder(folder_hash: String) {
+    audit_history::delete_folder(&folder_hash).await;
+}
+
+#[tauri::command]
+pub fn set_audit_enabled(enabled: bool) -> AppSettings {
+    let mut current = app_settings::get();
+    current.audit_history_enabled = enabled;
+    app_settings::set(current)
+}
+
+#[tauri::command]
+pub async fn set_max_dynamic_sessions(cap: u32) -> AppSettings {
+    let mut current = app_settings::get();
+    current.max_dynamic_sessions = cap;
+    let updated = app_settings::set(current);
+    audit_history::set_max_dynamic_sessions(cap).await;
+    updated
+}
+
+#[tauri::command]
+pub fn set_audit_skip_unpinned_delete_confirm(value: bool) -> AppSettings {
+    let mut current = app_settings::get();
+    current.audit_skip_unpinned_delete_confirm = value;
+    app_settings::set(current)
 }

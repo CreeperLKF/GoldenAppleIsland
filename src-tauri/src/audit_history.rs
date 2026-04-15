@@ -333,6 +333,69 @@ fn evict_if_needed(index: &mut AuditIndex, cap: u32) {
     }
 }
 
+pub async fn get_index() -> AuditIndex {
+    store().index.lock().await.clone()
+}
+
+pub async fn set_folder_pinned(folder_hash: &str, pinned: bool) {
+    let mut guard = store().index.lock().await;
+    if let Some(f) = guard.folders.get_mut(folder_hash) {
+        f.pinned = pinned;
+    }
+    rebuild_fixed(&mut guard);
+    drop(guard);
+    schedule_flush();
+}
+
+pub async fn set_session_pinned(folder_hash: &str, session_id: &str, pinned: bool) {
+    let mut guard = store().index.lock().await;
+    if let Some(f) = guard.folders.get_mut(folder_hash) {
+        if let Some(s) = f.sessions.get_mut(session_id) {
+            s.pinned = pinned;
+        }
+    }
+    rebuild_fixed(&mut guard);
+    drop(guard);
+    schedule_flush();
+}
+
+pub async fn delete_session(folder_hash: &str, session_id: &str) {
+    let _ = fs::remove_file(session_path(folder_hash, session_id));
+    let mut guard = store().index.lock().await;
+    if let Some(f) = guard.folders.get_mut(folder_hash) {
+        f.sessions.remove(session_id);
+    }
+    drop(guard);
+    schedule_flush();
+}
+
+pub async fn delete_folder(folder_hash: &str) {
+    let _ = fs::remove_dir_all(folder_dir(folder_hash));
+    let mut guard = store().index.lock().await;
+    guard.folders.remove(folder_hash);
+    drop(guard);
+    schedule_flush();
+}
+
+pub async fn set_max_dynamic_sessions(cap: u32) {
+    let mut guard = store().index.lock().await;
+    guard.max_dynamic_sessions = cap;
+    rebuild_fixed(&mut guard);
+    evict_if_needed(&mut guard, cap);
+    drop(guard);
+    schedule_flush();
+}
+
+pub fn read_session_records(folder_hash: &str, session_id: &str) -> Vec<EventRecord> {
+    let path = session_path(folder_hash, session_id);
+    let Ok(content) = fs::read_to_string(path) else { return Vec::new() };
+    content
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .filter_map(|l| serde_json::from_str::<EventRecord>(l).ok())
+        .collect()
+}
+
 pub async fn record_blocking(
     event: &HookEvent,
     decision: Decision,
