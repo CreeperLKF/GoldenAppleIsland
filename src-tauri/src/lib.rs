@@ -1,5 +1,6 @@
 pub mod agent_approve;
 mod app_settings;
+pub mod external_approve;
 mod audit_history;
 mod commands;
 mod file_logger;
