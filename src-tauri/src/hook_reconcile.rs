@@ -30,12 +30,12 @@ pub fn command_for(target: HookTarget, kind: HookEventKind) -> String {
 }
 
 /// True when a given `command` string looks like one of our managed scripts
-/// (regardless of which event it was attached to, or which target).
-/// We recognize both .cmd and .sh so that switching targets cleans up
-/// entries left behind by the previous target.
-fn is_managed_command(_target: HookTarget, command: &str) -> bool {
-    command.starts_with("~/.claude/hooks/")
-        && (command.ends_with(".cmd") || command.ends_with(".sh"))
+/// for the specified target. A Windows reconciler recognises only `.cmd`
+/// entries; a WSL reconciler recognises only `.sh` entries. Cross-target
+/// entries are treated as unrelated user hooks and left untouched.
+fn is_managed_command(target: HookTarget, command: &str) -> bool {
+    let ext = target.extension();
+    command.starts_with("~/.claude/hooks/") && command.ends_with(&format!(".{}", ext))
 }
 
 /// Rewrite `settings` in place so that its `hooks` tree registers exactly
@@ -173,7 +173,7 @@ mod tests {
                 "PreToolUse": [{
                     "matcher": "*",
                     "hooks": [
-                        { "type": "command", "command": "~/.claude/hooks/pre-tool-use.cmd" },
+                        { "type": "command", "command": "~/.claude/hooks/pre-tool-use.sh" },
                         { "type": "command", "command": "/usr/local/bin/my-own-hook" }
                     ]
                 }]
@@ -189,6 +189,50 @@ mod tests {
         assert_eq!(
             inner[0].get("command").unwrap().as_str().unwrap(),
             "/usr/local/bin/my-own-hook"
+        );
+    }
+
+    #[test]
+    fn cross_target_entries_are_left_alone() {
+        // A stray .cmd entry sitting in a settings.json that the WSL
+        // reconciler is operating on must be treated like any unrelated
+        // user hook — left alone, never overwritten.
+        let mut v = json!({
+            "hooks": {
+                "PreToolUse": [{
+                    "matcher": "*",
+                    "hooks": [{ "type": "command", "command": "~/.claude/hooks/pre-tool-use.cmd" }]
+                }]
+            }
+        });
+        apply_desired_set(&mut v, HookTarget::Wsl, &set(&[K::PreToolUse]));
+        let inner = v
+            .pointer("/hooks/PreToolUse/0/hooks")
+            .unwrap()
+            .as_array()
+            .unwrap();
+        // The original .cmd entry survives, AND a new .sh entry is added.
+        assert_eq!(inner.len(), 1, "cmd survives in its own group");
+        assert_eq!(
+            inner[0].get("command").unwrap().as_str().unwrap(),
+            "~/.claude/hooks/pre-tool-use.cmd"
+        );
+        // The .sh entry should appear in a *separate* group (apply_desired_set
+        // adds a fresh group for newly desired managed entries).
+        let groups = v
+            .pointer("/hooks/PreToolUse")
+            .unwrap()
+            .as_array()
+            .unwrap();
+        assert_eq!(groups.len(), 2, "should have two groups now");
+        let second_group_inner = groups[1]
+            .get("hooks")
+            .unwrap()
+            .as_array()
+            .unwrap();
+        assert_eq!(
+            second_group_inner[0].get("command").unwrap().as_str().unwrap(),
+            "~/.claude/hooks/pre-tool-use.sh"
         );
     }
 
