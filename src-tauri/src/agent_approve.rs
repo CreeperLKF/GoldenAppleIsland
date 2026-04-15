@@ -322,6 +322,40 @@ pub async fn run_agent_call(
     Ok(parsed)
 }
 
+/// Download CLAUDE.md from the ALICE repo. Returns the text body on 2xx, error otherwise.
+pub async fn download_alice_claude_md() -> Result<String, String> {
+    let resp = reqwest::Client::builder()
+        .user_agent("golden-apple-island")
+        .build()
+        .map_err(|e| e.to_string())?
+        .get(ALICE_URL)
+        .send()
+        .await
+        .map_err(|e| format!("request failed: {}", e))?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status()));
+    }
+    resp.text().await.map_err(|e| e.to_string())
+}
+
+/// High-level: create (or recreate) the default workspace with a fresh download.
+pub async fn install_default_workspace() -> Result<PathBuf, String> {
+    let dir = default_workspace_dir();
+    if dir.exists() {
+        if !is_default_gai_workspace(&dir) {
+            return Err(format!(
+                "refusing to overwrite {}: not a gai-default workspace",
+                dir.display()
+            ));
+        }
+        nuke_default_workspace(&dir).map_err(|e| e.to_string())?;
+    }
+    let body = download_alice_claude_md().await?;
+    let now = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+    write_default_workspace(&dir, &body, &now).map_err(|e| e.to_string())?;
+    Ok(dir)
+}
+
 #[cfg(test)]
 pub(crate) fn record_turn(session_id: &str) {
     record_turn_with_workspace(session_id, PathBuf::from("."));
