@@ -290,8 +290,7 @@ pub async fn run_agent_call(
         .arg(prompt)
         .arg("--output-format")
         .arg("json")
-        .arg("--cwd")
-        .arg(workspace);
+        .current_dir(workspace);
     if let Some(id) = resume_id.as_ref() {
         cmd.arg("--resume").arg(id);
     }

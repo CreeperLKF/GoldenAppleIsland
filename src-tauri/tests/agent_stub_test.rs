@@ -37,6 +37,10 @@ fn build_stub_exe(dir: &Path) -> PathBuf {
     fs::write(
         &src_path,
         r#"fn main() {
+    if std::env::args().any(|a| a == "--cwd") {
+        eprintln!("stub: --cwd is not a valid claude CLI flag");
+        std::process::exit(2);
+    }
     let env = std::env::var("GAI_STUB_ENVELOPE").unwrap_or_default();
     println!("{}", env);
 }

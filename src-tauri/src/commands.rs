@@ -601,7 +601,13 @@ pub async fn set_external_config(
 ) -> Result<(), String> {
     // Validate before mutating state.
     if let Some(url) = patch.endpoint_url.as_ref() {
-        reqwest::Url::parse(url).map_err(|_| format!("invalid URL: {}", url))?;
+        let parsed = reqwest::Url::parse(url).map_err(|e| format!("invalid URL: {}", e))?;
+        if !matches!(parsed.scheme(), "http" | "https") {
+            return Err(format!(
+                "URL must use http or https scheme, got '{}'",
+                parsed.scheme()
+            ));
+        }
     }
     if let Some(h) = patch.auth_header.as_ref() {
         if !h.is_empty() {
