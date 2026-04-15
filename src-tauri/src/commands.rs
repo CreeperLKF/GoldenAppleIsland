@@ -3,6 +3,7 @@ use tauri::{AppHandle, Emitter, Manager, WebviewUrl, WebviewWindowBuilder, Windo
 
 use crate::app_settings::{self, AppSettings};
 use crate::file_logger;
+use crate::hook_modes::{HookTargetConfig, WorkingMode};
 use crate::path_norm;
 use crate::policy::{
     self, ApprovalPolicies, PolicyKind, PolicyRule, SessionRule, SESSION_RULE_CAP,
@@ -383,5 +384,44 @@ pub fn set_hotkey(app: tauri::AppHandle, slot: String, accel: String) -> Result<
         crate::hotkeys::Slot::ApproveAll => settings.hotkey_approve_all = accel,
     }
     crate::app_settings::set(settings);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn set_default_mode(mode: WorkingMode) -> AppSettings {
+    let mut current = app_settings::get();
+    current.default_mode = mode;
+    app_settings::set(current)
+}
+
+#[tauri::command]
+pub async fn set_windows_hook_config(config: HookTargetConfig) -> Result<(), String> {
+    let mut current = app_settings::get();
+    current.windows_hook_config = config.clone();
+    let enabled_now = current
+        .windows_hook_cache
+        .as_ref()
+        .map(|c| c.registered)
+        .unwrap_or(false);
+    app_settings::set(current);
+    if enabled_now {
+        crate::windows_hook::apply_config(&config)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn set_wsl_hook_config(distro: String, config: HookTargetConfig) -> Result<(), String> {
+    let mut current = app_settings::get();
+    current.wsl_hook_configs.insert(distro.clone(), config.clone());
+    let was_enabled = current
+        .wsl_status_cache
+        .get(&distro)
+        .map(|c| c.registered)
+        .unwrap_or(false);
+    app_settings::set(current);
+    if was_enabled {
+        wsl_admin::apply_config(&distro, &config).await?;
+    }
     Ok(())
 }
