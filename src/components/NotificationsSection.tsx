@@ -11,23 +11,16 @@ export default function NotificationsSection({
   onChange,
 }: NotificationsSectionProps) {
   return (
-    <section className="flex flex-col" style={{ padding: "12px 16px", gap: 12 }}>
-      <h2
-        className="font-semibold text-[var(--text-primary)]"
-        style={{ fontSize: 13, margin: 0 }}
-      >
-        Notifications
-      </h2>
-
+    <div className="flex flex-col" style={{ gap: 12 }}>
       <div className="flex items-center justify-between">
         <div className="flex flex-col" style={{ gap: 2 }}>
           <span
             className="text-[var(--text-primary)]"
-            style={{ fontSize: 12, fontWeight: 500 }}
+            style={{ fontSize: "var(--fs-body)", fontWeight: 500 }}
           >
             Show Windows toast on new event
           </span>
-          <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
+          <span className="text-[var(--text-tertiary)]" style={{ fontSize: "var(--fs-small)" }}>
             Popup cards still appear regardless of this setting.
           </span>
         </div>
@@ -43,7 +36,7 @@ export default function NotificationsSection({
           <span
             className="text-[var(--text-primary)]"
             style={{
-              fontSize: 12,
+              fontSize: "var(--fs-body)",
               fontWeight: 500,
               opacity: settings.toast_enabled ? 1 : 0.5,
             }}
@@ -52,7 +45,7 @@ export default function NotificationsSection({
           </span>
           <span
             className="text-[var(--text-tertiary)]"
-            style={{ fontSize: 11, opacity: settings.toast_enabled ? 1 : 0.5 }}
+            style={{ fontSize: "var(--fs-small)", opacity: settings.toast_enabled ? 1 : 0.5 }}
           >
             Uses the default Windows notification chime.
           </span>
@@ -64,6 +57,6 @@ export default function NotificationsSection({
           ariaLabel="Toggle notification sound"
         />
       </div>
-    </section>
+    </div>
   );
 }

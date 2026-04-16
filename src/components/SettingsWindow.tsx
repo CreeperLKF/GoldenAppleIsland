@@ -13,26 +13,11 @@ import SettingsTabs, { type TabDef } from "./SettingsTabs";
 import { useAppSettings } from "../hooks/useAppSettings";
 import { useTheme } from "../hooks/useTheme";
 import AppearanceSection from "./AppearanceSection";
+import BrandMark from "./ui/BrandMark";
+import SectionCard from "./ui/SectionCard";
 import type { AppSettings, SettingsTabId } from "../types/settings";
 import type { WorkingMode } from "../types/modes";
 import AuditHistoryTab from "./AuditHistoryTab";
-
-function SubsectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="font-semibold text-[var(--text-primary)]"
-      style={{ fontSize: 12, padding: "8px 16px 4px" }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function SubsectionDivider() {
-  return (
-    <div style={{ borderTop: "0.5px solid var(--border)", margin: "8px 16px" }} />
-  );
-}
 
 function GeneralTab({
   settings,
@@ -42,23 +27,22 @@ function GeneralTab({
   update: (patch: Partial<AppSettings>) => Promise<void>;
 }) {
   return (
-    <div className="flex flex-col" style={{ gap: 0 }}>
-      <SubsectionHeading>Appearance</SubsectionHeading>
-      <div style={{ padding: "8px 16px 12px" }}>
+    <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+      <SectionCard title="Appearance">
         <AppearanceSection settings={settings} onChange={update} />
-      </div>
-      <SubsectionDivider />
-      <SubsectionHeading>Notifications</SubsectionHeading>
-      <NotificationsSection settings={settings} onChange={update} />
-      <SubsectionDivider />
-      <SubsectionHeading>WebSocket Port</SubsectionHeading>
-      <PortSection settings={settings} onChange={update} />
-      <SubsectionDivider />
-      <SubsectionHeading>Debugging</SubsectionHeading>
-      <LoggingSection settings={settings} onChange={update} />
-      <SubsectionDivider />
-      <SubsectionHeading>Global shortcuts</SubsectionHeading>
-      <GlobalShortcutsSection settings={settings} onChange={update} />
+      </SectionCard>
+      <SectionCard title="Notifications">
+        <NotificationsSection settings={settings} onChange={update} />
+      </SectionCard>
+      <SectionCard title="WebSocket Port">
+        <PortSection settings={settings} onChange={update} />
+      </SectionCard>
+      <SectionCard title="Debugging">
+        <LoggingSection settings={settings} onChange={update} />
+      </SectionCard>
+      <SectionCard title="Global Shortcuts">
+        <GlobalShortcutsSection settings={settings} onChange={update} />
+      </SectionCard>
     </div>
   );
 }
@@ -75,37 +59,38 @@ function HookManagementTab({
     await update({});
   };
   return (
-    <div className="flex flex-col" style={{ gap: 0 }}>
-      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Default mode:</span>
-        <select
-          value={settings.default_mode}
-          onChange={(e) => onDefaultChange(e.target.value as WorkingMode)}
-          style={{
-            height: 24,
-            fontSize: 11,
-            padding: "0 6px",
-            background: "var(--bg-elevated)",
-            color: "var(--text-primary)",
-            border: "0.5px solid var(--border)",
-            borderRadius: 4,
-          }}
-        >
-          <option value="control">Control</option>
-          <option value="audit">Audit</option>
-          <option value="observe">Observe</option>
-          <option value="custom">Custom</option>
-        </select>
-        <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
-          (applies only to newly enabled targets)
-        </span>
-      </div>
-      <SubsectionDivider />
-      <SubsectionHeading>Windows hook</SubsectionHeading>
-      <WindowsHookSection />
-      <SubsectionDivider />
-      <SubsectionHeading>WSL instances</SubsectionHeading>
-      <WslInstancesSection />
+    <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 12 }}>
+      <SectionCard title="Default Mode">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <select
+            value={settings.default_mode}
+            onChange={(e) => onDefaultChange(e.target.value as WorkingMode)}
+            style={{
+              height: 24,
+              fontSize: "var(--fs-small)",
+              padding: "0 6px",
+              background: "var(--bg-elevated)",
+              color: "var(--text-primary)",
+              border: "0.5px solid var(--border)",
+              borderRadius: 4,
+            }}
+          >
+            <option value="control">Control</option>
+            <option value="audit">Audit</option>
+            <option value="observe">Observe</option>
+            <option value="custom">Custom</option>
+          </select>
+          <span style={{ fontSize: "var(--fs-small)", color: "var(--text-tertiary)" }}>
+            Applies only to newly enabled targets
+          </span>
+        </div>
+      </SectionCard>
+      <SectionCard title="Windows Hook">
+        <WindowsHookSection />
+      </SectionCard>
+      <SectionCard title="WSL Instances">
+        <WslInstancesSection />
+      </SectionCard>
     </div>
   );
 }
@@ -173,13 +158,21 @@ export default function SettingsWindow() {
         style={{
           height: 40,
           padding: "0 12px",
-          borderBottom: "0.5px solid var(--border)",
+          boxShadow: "0 0.5px 0 0 var(--border), 0 1px 0 0 var(--gold-line)",
         }}
       >
         <span
-          className="font-semibold text-[var(--text-primary)]"
-          style={{ fontSize: 13 }}
+          className="text-[var(--text-primary)]"
+          style={{
+            fontSize: "var(--fs-display)",
+            fontWeight: 600,
+            letterSpacing: "-0.015em",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
         >
+          <BrandMark size={18} />
           Settings
         </span>
         <button
@@ -204,7 +197,7 @@ export default function SettingsWindow() {
 
       {error && (
         <div
-          className="text-[var(--deny-text)]"
+          className="text-[var(--sem-deny)]"
           style={{ fontSize: 12, padding: "0 16px" }}
         >
           {error}

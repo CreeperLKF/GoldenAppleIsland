@@ -1,5 +1,7 @@
 import type { ApprovalPolicies, RecentSession } from "../types/events";
 import { resolvePolicy, type TierResult } from "../lib/resolvePolicy";
+import Icon from "./ui/Icon";
+import { middleEllipsis } from "../lib/format";
 
 interface Props {
   policies: ApprovalPolicies;
@@ -27,12 +29,6 @@ const TIER_LABEL_TITLE: Record<TierResult["tier"], string> = {
   session: "Session",
 };
 
-function truncateMiddle(s: string, max: number): string {
-  if (s.length <= max) return s;
-  const keep = Math.max(4, Math.floor((max - 1) / 2));
-  return `${s.slice(0, keep)}…${s.slice(s.length - keep)}`;
-}
-
 function formatResult(t: TierResult): string {
   const tierLabel = TIER_LABEL_TITLE[t.tier];
   const kindLabel = t.kind === "auto" ? "Auto" : t.kind === "manual" ? "Manual" : "—";
@@ -41,8 +37,8 @@ function formatResult(t: TierResult): string {
   }
   const key = t.matchedKey
     ? t.tier === "session"
-      ? truncateMiddle(t.matchedKey, 14)
-      : truncateMiddle(t.matchedKey, 32)
+      ? middleEllipsis(t.matchedKey, 14)
+      : middleEllipsis(t.matchedKey, 32)
     : "—";
   const suffix =
     t.tier === "folder" && t.includeSubdirectories ? " (includes subdirs)" : "";
@@ -65,53 +61,41 @@ export default function ResolverPanel({ policies, recent }: Props) {
   return (
     <div
       style={{
-        border: "0.5px solid var(--border)",
-        borderRadius: 4,
-        padding: "8px 10px",
-        margin: "0 16px",
+        background: "var(--bg-subtle)",
+        borderRadius: "var(--radius-sm)",
+        fontFamily: "var(--font-mono)",
+        fontSize: "var(--fs-mono-xs)",
+        padding: "8px 12px",
         display: "flex",
         flexDirection: "column",
         gap: 6,
       }}
     >
-      <div
-        className="font-semibold text-[var(--text-primary)]"
-        style={{ fontSize: 12 }}
-      >
-        How policies resolve
-      </div>
-      <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-        Session policies apply along the resolve chain — later tiers override
-        earlier ones.
-      </div>
-
+      {/* Breadcrumb chain */}
       <div
         style={{
-          fontFamily: "monospace",
-          fontSize: 11,
           display: "flex",
           alignItems: "center",
           flexWrap: "wrap",
           gap: 4,
-          marginTop: 2,
         }}
       >
-        <span style={{ color: "var(--text-tertiary)" }}>resolve chain:&nbsp;</span>
         {CHAIN.map((tier, i) => {
           const isWinner = tier === winnerTier;
           return (
-            <span key={tier} style={{ display: "inline-flex", alignItems: "center" }}>
+            <span key={tier} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
               <span
                 style={
                   isWinner
                     ? {
-                        color: "var(--text-primary)",
+                        background: "var(--gold)",
+                        color: "var(--gold-ink)",
                         fontWeight: 600,
-                        background: "var(--badge-permission-bg)",
-                        padding: "0 4px",
-                        borderRadius: 3,
+                        padding: "2px 8px",
+                        borderRadius: 4,
                       }
                     : {
+                        background: "transparent",
                         color: "var(--text-tertiary)",
                       }
                 }
@@ -119,47 +103,34 @@ export default function ResolverPanel({ policies, recent }: Props) {
                 {TIER_LABEL[tier]}
               </span>
               {i < CHAIN.length - 1 && (
-                <span style={{ color: "var(--text-tertiary)", margin: "0 4px" }}>
-                  ▸
-                </span>
+                <Icon name="chevron-right" size={10} style={{ color: "var(--text-muted)" }} />
               )}
             </span>
           );
         })}
+        {result && (
+          <span style={{ marginLeft: "auto", color: "var(--text-secondary)" }}>
+            {result.tiers[result.winnerIndex]?.kind === "auto" ? "→ Auto" : "→ Manual"}
+          </span>
+        )}
       </div>
 
       {session && result ? (
         <>
           <div
-            style={{
-              fontFamily: "monospace",
-              fontSize: 11,
-              color: "var(--text-tertiary)",
-            }}
+            style={{ color: "var(--text-tertiary)" }}
             title={`${session.session_id} · ${session.start_cwd_normalized}`}
           >
             last session:&nbsp;&nbsp;
-            {truncateMiddle(session.session_id, 14)} ·{" "}
-            {truncateMiddle(session.start_cwd_normalized, 32)} · {session.distro}
+            {middleEllipsis(session.session_id, 14)} ·{" "}
+            {middleEllipsis(session.start_cwd_normalized, 32)} · {session.distro}
           </div>
-          <div
-            style={{
-              fontSize: 11,
-              color: "var(--text-primary)",
-              marginTop: 2,
-            }}
-          >
+          <div style={{ color: "var(--text-primary)" }}>
             {formatResult(result.tiers[result.winnerIndex])}
           </div>
         </>
       ) : (
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--text-tertiary)",
-            padding: "2px 0",
-          }}
-        >
+        <div style={{ color: "var(--text-tertiary)" }}>
           No sessions seen yet — the resolver will show which tier wins once an
           event arrives.
         </div>

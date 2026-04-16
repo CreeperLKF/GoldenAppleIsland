@@ -19,32 +19,25 @@ export default function LoggingSection({
   }, []);
 
   return (
-    <section className="flex flex-col" style={{ padding: "12px 16px", gap: 12 }}>
-      <h2
-        className="font-semibold text-[var(--text-primary)]"
-        style={{ fontSize: 13, margin: 0 }}
-      >
-        Debug Logging
-      </h2>
-
+    <div className="flex flex-col" style={{ gap: 12 }}>
       <div className="flex items-center justify-between">
         <div className="flex flex-col" style={{ gap: 2 }}>
           <span
             className="text-[var(--text-primary)]"
-            style={{ fontSize: 12, fontWeight: 500 }}
+            style={{ fontSize: "var(--fs-body)", fontWeight: 500 }}
           >
             Write logs to file
           </span>
-          <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
+          <span className="text-[var(--text-tertiary)]" style={{ fontSize: "var(--fs-small)" }}>
             Saves frontend and backend logs. Keeps last 2 launches.
           </span>
-          <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
+          <span className="text-[var(--text-tertiary)]" style={{ fontSize: "var(--fs-small)" }}>
             Restart required to take effect.
           </span>
           {logDir && (
             <span
               className="text-[var(--text-tertiary)]"
-              style={{ fontSize: 10, fontFamily: "monospace", wordBreak: "break-all" }}
+              style={{ fontSize: "var(--fs-mono-xs)", fontFamily: "var(--font-mono)", wordBreak: "break-all" }}
             >
               {logDir}
             </span>
@@ -56,6 +49,6 @@ export default function LoggingSection({
           ariaLabel="Toggle debug logging to file"
         />
       </div>
-    </section>
+    </div>
   );
 }

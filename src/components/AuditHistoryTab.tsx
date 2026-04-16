@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAuditHistory } from "../hooks/useAuditHistory";
 import { useAppSettings } from "../hooks/useAppSettings";
+import SectionCard from "./ui/SectionCard";
+import Icon from "./ui/Icon";
 import type { EventRecord, FolderMeta, SessionMeta } from "../types/audit";
 
 interface Selection {
@@ -97,40 +99,44 @@ export default function AuditHistoryTab() {
 
   return (
     <div className="flex flex-col" style={{ gap: 0 }}>
-      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-        <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={!!settings?.audit_history_enabled}
-            onChange={(e) => setRecording(e.target.checked)}
-          />
-          Recording
-        </label>
-        <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
-          Max dynamic sessions:
-          <input
-            type="number"
-            min={1}
-            max={1000}
-            value={settings?.max_dynamic_sessions ?? 50}
-            onChange={(e) => {
-              const n = Number.parseInt(e.target.value, 10);
-              if (Number.isFinite(n) && n > 0) void setCap(n);
-            }}
-            style={{
-              width: 60,
-              fontSize: 11,
-              background: "var(--bg-elevated)",
-              color: "var(--text-primary)",
-              border: "0.5px solid var(--border)",
-              borderRadius: 4,
-              padding: "2px 4px",
-            }}
-          />
-          <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
-            (pinned don't count)
-          </span>
-        </label>
+      <div style={{ padding: 12 }}>
+        <SectionCard title="Recording">
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <label style={{ fontSize: "var(--fs-body)", display: "flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={!!settings?.audit_history_enabled}
+                onChange={(e) => setRecording(e.target.checked)}
+              />
+              Enabled
+            </label>
+            <label style={{ fontSize: "var(--fs-body)", display: "flex", alignItems: "center", gap: 6 }}>
+              Max dynamic sessions:
+              <input
+                type="number"
+                min={1}
+                max={1000}
+                value={settings?.max_dynamic_sessions ?? 50}
+                onChange={(e) => {
+                  const n = Number.parseInt(e.target.value, 10);
+                  if (Number.isFinite(n) && n > 0) void setCap(n);
+                }}
+                style={{
+                  width: 60,
+                  fontSize: "var(--fs-small)",
+                  background: "var(--bg-elevated)",
+                  color: "var(--text-primary)",
+                  border: "0.5px solid var(--border)",
+                  borderRadius: 4,
+                  padding: "2px 4px",
+                }}
+              />
+              <span style={{ fontSize: "var(--fs-small)", color: "var(--text-tertiary)" }}>
+                (pinned don't count)
+              </span>
+            </label>
+          </div>
+        </SectionCard>
       </div>
       <div style={{ borderTop: "0.5px solid var(--border)" }} />
 
@@ -212,7 +218,8 @@ export default function AuditHistoryTab() {
                     {expanded[r.id] && (
                       <pre
                         style={{
-                          fontSize: 10,
+                          fontSize: "var(--fs-mono-xs)",
+                          fontFamily: "var(--font-mono)",
                           marginTop: 4,
                           whiteSpace: "pre-wrap",
                         }}
@@ -273,8 +280,10 @@ function FolderRow({
         onClick={() => setExpanded((v) => !v)}
         title={folder.cwd}
       >
-        <span>{expanded ? "▾" : "▸"}</span>
-        <span>{folder.pinned ? "📌" : "  "}</span>
+        {expanded
+          ? <Icon name="chevron-down" size={10} style={{ flexShrink: 0 }} />
+          : <Icon name="chevron-right" size={10} style={{ flexShrink: 0 }} />}
+        {folder.pinned && <Icon name="pin" size={10} style={{ flexShrink: 0, color: "var(--gold)" }} />}
         <span style={{ fontWeight: 500 }}>{folder.display_name}</span>
         <span style={{ marginLeft: "auto", fontSize: 10, color: "var(--text-tertiary)" }}>
           {sessions.length}
@@ -356,10 +365,14 @@ function SessionRow({
           background: active ? "var(--approve-text)" : "var(--text-tertiary)",
         }}
       />
-      <span style={{ fontFamily: "monospace" }}>{id.slice(0, 10)}</span>
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-mono-xs)" }}>{id.slice(0, 10)}</span>
       <span style={{ color: "var(--text-tertiary)" }}>{meta.event_count} evts</span>
-      <span style={{ marginLeft: "auto" }}>
-        {meta.pinned ? "📌" : meta.fixed ? "·" : " "}
+      <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center" }}>
+        {meta.pinned
+          ? <Icon name="pin" size={10} style={{ color: "var(--gold)" }} />
+          : meta.fixed
+            ? <span style={{ color: "var(--text-tertiary)" }}>·</span>
+            : null}
       </span>
       <button
         type="button"

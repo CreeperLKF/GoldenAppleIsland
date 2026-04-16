@@ -25,7 +25,7 @@ export default function SettingsTabs({ tabs, active, onChange }: Props) {
         role="tablist"
         className="flex items-center bg-[var(--bg-surface)]"
         style={{
-          height: 32,
+          height: 36,
           padding: "0 8px",
           gap: 4,
           borderBottom: "0.5px solid var(--border)",
@@ -41,9 +41,10 @@ export default function SettingsTabs({ tabs, active, onChange }: Props) {
               aria-selected={isActive}
               onClick={() => onChange(t.id)}
               style={{
-                height: 28,
+                height: 32,
                 padding: "0 10px",
                 fontSize: 12,
+                fontFamily: "var(--font-ui)",
                 fontWeight: isActive ? 600 : 400,
                 color: isActive
                   ? "var(--text-primary)"
@@ -51,7 +52,7 @@ export default function SettingsTabs({ tabs, active, onChange }: Props) {
                 background: "transparent",
                 border: "none",
                 borderBottom: isActive
-                  ? "2px solid var(--accent, var(--text-primary))"
+                  ? "2px solid var(--gold)"
                   : "2px solid transparent",
                 cursor: "pointer",
               }}

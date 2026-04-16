@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import Button from "./ui/Button";
 import type { AppSettings } from "../types/settings";
 
 interface PortSectionProps {
@@ -22,13 +23,7 @@ export default function PortSection({ settings, onChange }: PortSectionProps) {
   }, [changed, draftNum, onChange]);
 
   return (
-    <section className="flex flex-col" style={{ padding: "12px 16px", gap: 8 }}>
-      <h2
-        className="font-semibold text-[var(--text-primary)]"
-        style={{ fontSize: 13, margin: 0 }}
-      >
-        WebSocket Port
-      </h2>
+    <div className="flex flex-col" style={{ gap: 8 }}>
       <div className="flex items-center" style={{ gap: 8 }}>
         <input
           type="number"
@@ -41,31 +36,18 @@ export default function PortSection({ settings, onChange }: PortSectionProps) {
           }}
           className="rounded border bg-[var(--bg-surface)] text-[var(--text-primary)]"
           style={{
-            fontSize: 13,
+            fontSize: "var(--fs-body)",
             height: 28,
             width: 100,
             padding: "0 8px",
             borderColor: "var(--border)",
           }}
         />
-        <button
-          type="button"
-          onClick={save}
-          disabled={!changed}
-          className="rounded border hover:brightness-95 disabled:opacity-40"
-          style={{
-            fontSize: 12,
-            height: 28,
-            padding: "0 12px",
-            borderColor: "var(--border)",
-            color: "var(--text-primary)",
-            background: "var(--bg-elevated)",
-          }}
-        >
+        <Button variant="primary" size="sm" onClick={save} disabled={!changed}>
           Save
-        </button>
+        </Button>
         {!valid && draft.length > 0 && (
-          <span className="text-[var(--deny-text)]" style={{ fontSize: 11 }}>
+          <span style={{ fontSize: "var(--fs-small)", color: "var(--sem-deny)" }}>
             Port must be 1024–65535
           </span>
         )}
@@ -74,16 +56,16 @@ export default function PortSection({ settings, onChange }: PortSectionProps) {
         <div
           className="rounded"
           style={{
-            fontSize: 11,
+            fontSize: "var(--fs-small)",
             padding: "6px 10px",
-            background: "var(--badge-shell-bg)",
-            color: "var(--badge-shell-text)",
+            background: "var(--bg-elevated)",
+            color: "var(--text-secondary)",
             border: "0.5px solid var(--border)",
           }}
         >
           Port updated. Restart the app to apply the new port. Hook registrations will be updated on next check.
         </div>
       )}
-    </section>
+    </div>
   );
 }

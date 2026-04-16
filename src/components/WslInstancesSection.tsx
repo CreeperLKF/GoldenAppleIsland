@@ -1,5 +1,6 @@
 import { useWslDistros } from "../hooks/useWslDistros";
 import Toggle from "./ui/Toggle";
+import Button from "./ui/Button";
 import type { WslDistroWithStatus } from "../types/settings";
 import { EMPTY_CUSTOM, type HookTargetConfig } from "../types/modes";
 import { useAppSettings } from "../hooks/useAppSettings";
@@ -11,71 +12,41 @@ export default function WslInstancesSection() {
   const { settings, update: updateSettings } = useAppSettings();
 
   return (
-    <section className="flex flex-col" style={{ padding: "12px 16px", gap: 10 }}>
+    <section className="flex flex-col" style={{ gap: 10 }}>
       <div className="flex items-center justify-between">
-        <h2
-          className="font-semibold text-[var(--text-primary)]"
-          style={{ fontSize: 13, margin: 0 }}
-        >
-          WSL Instances
-        </h2>
         <div className="flex items-center" style={{ gap: 6 }}>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={refresh}
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-            style={{ fontSize: 11 }}
           >
             Refresh
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={updateScripts}
             disabled={loading || updating || distros.length === 0}
-            className="rounded border hover:brightness-95 disabled:opacity-40"
-            style={{
-              fontSize: 11,
-              height: 22,
-              padding: "0 8px",
-              borderColor: "var(--border)",
-              color: "var(--text-secondary)",
-              background: "var(--bg-elevated)",
-            }}
           >
             {updating ? "Updating…" : "Update scripts"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setAll(true)}
             disabled={loading || distros.length === 0}
-            className="rounded border hover:brightness-95 disabled:opacity-40"
-            style={{
-              fontSize: 11,
-              height: 22,
-              padding: "0 8px",
-              borderColor: "var(--border)",
-              color: "var(--approve-text)",
-              background: "var(--approve-bg)",
-            }}
           >
             Enable all
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="secondary"
+            tone="danger"
+            size="sm"
             onClick={() => setAll(false)}
             disabled={loading || distros.length === 0}
-            className="rounded border hover:brightness-95 disabled:opacity-40"
-            style={{
-              fontSize: 11,
-              height: 22,
-              padding: "0 8px",
-              borderColor: "var(--border)",
-              color: "var(--deny-text)",
-              background: "var(--deny-bg)",
-            }}
           >
             Disable all
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -107,7 +78,7 @@ export default function WslInstancesSection() {
         </div>
       )}
 
-      <ul className="flex flex-col" style={{ gap: 6 }}>
+      <ul className="flex flex-col" style={{ gap: 6, listStyle: "none", margin: 0, padding: 0 }}>
         {distros.map((d) => (
           <DistroRow
             key={d.name}
@@ -159,19 +130,21 @@ function DistroRow({
 
   return (
     <li
-      className="flex items-center justify-between bg-[var(--bg-surface)]"
       style={{
-        padding: "8px 10px",
-        borderRadius: 6,
-        border: "0.5px solid var(--border)",
-        gap: 12,
+        background: "var(--bg-elevated)",
+        borderRadius: 8,
+        padding: "10px 12px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
       }}
     >
-      <div className="flex flex-col" style={{ gap: 2, minWidth: 0 }}>
-        <div className="flex items-center" style={{ gap: 6 }}>
+      {/* Row 1: name + badges */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+        <div className="flex items-center" style={{ gap: 6, minWidth: 0 }}>
           <span
             className="text-[var(--text-primary)]"
-            style={{ fontSize: 13, fontWeight: 500 }}
+            style={{ fontSize: "var(--fs-body)", fontWeight: 500 }}
           >
             {name}
           </span>
@@ -179,9 +152,9 @@ function DistroRow({
             <span
               className="rounded"
               style={{
-                fontSize: 10,
+                fontSize: "var(--fs-small)",
                 padding: "1px 6px",
-                background: "var(--bg-elevated)",
+                background: "var(--bg-surface)",
                 color: "var(--text-secondary)",
                 border: "0.5px solid var(--border)",
               }}
@@ -189,15 +162,15 @@ function DistroRow({
               default
             </span>
           )}
-          <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
+          <span className="text-[var(--text-tertiary)]" style={{ fontSize: "var(--fs-small)" }}>
             WSL{version}
           </span>
           <span
             className="rounded"
             style={{
-              fontSize: 10,
+              fontSize: "var(--fs-small)",
               padding: "1px 6px",
-              background: isRunning ? "var(--approve-bg)" : "var(--bg-elevated)",
+              background: isRunning ? "var(--approve-bg)" : "var(--bg-surface)",
               color: isRunning ? "var(--approve-text)" : "var(--text-tertiary)",
               border: "0.5px solid var(--border)",
             }}
@@ -205,29 +178,28 @@ function DistroRow({
             {state}
           </span>
         </div>
-        <div className="flex items-center" style={{ gap: 6 }}>
-          <span style={{ fontSize: 11, color: statusColor }}>{statusLabel}</span>
-          {!isRunning && (
-            <button
-              type="button"
-              onClick={onCheck}
-              disabled={busy}
-              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40"
-              style={{ fontSize: 10, textDecoration: "underline" }}
-            >
-              Check
-            </button>
-          )}
-        </div>
       </div>
-      <div className="flex items-center" style={{ gap: 8 }}>
+      {/* Row 2: status + controls */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: "var(--fs-small)", color: statusColor, flex: 1 }}>{statusLabel}</span>
+        {!isRunning && (
+          <button
+            type="button"
+            onClick={onCheck}
+            disabled={busy}
+            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] disabled:opacity-40"
+            style={{ fontSize: "var(--fs-small)", textDecoration: "underline" }}
+          >
+            Check
+          </button>
+        )}
         <HookModeDropdown
           config={config}
           onChange={(next) => onConfigChange(next)}
           disabled={busy}
         />
         {busy && (
-          <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
+          <span className="text-[var(--text-tertiary)]" style={{ fontSize: "var(--fs-small)" }}>
             …
           </span>
         )}

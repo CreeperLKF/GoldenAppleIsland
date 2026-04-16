@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useExternalConfig } from "../hooks/useExternalConfig";
+import Button from "./ui/Button";
+import StatRow from "./ui/StatRow";
 
 function isValidUrl(s: string): boolean {
   try {
@@ -81,169 +83,138 @@ export default function ExternalApproveSection() {
   };
 
   return (
-    <section
+    <div
       id="external-approve-section"
       className="flex flex-col"
-      style={{
-        padding: "12px 16px",
-        gap: 10,
-        borderTop: "0.5px solid var(--border)",
-      }}
+      style={{ gap: 10 }}
     >
-      <h2
-        className="font-semibold text-[var(--text-primary)]"
-        style={{ fontSize: 13, margin: 0 }}
-      >
-        External Approve{" "}
-        <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>
-          (experimental)
-        </span>
-      </h2>
-      <div className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
+      <div style={{ fontSize: "var(--fs-small)", color: "var(--text-tertiary)" }}>
         Delegate approvals to an HTTP endpoint you control.
       </div>
 
       {/* Endpoint URL */}
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <span
-          style={{ width: 110, fontSize: 12, color: "var(--text-secondary)" }}
-        >
-          Endpoint URL
-        </span>
-        <input
-          type="text"
-          placeholder="https://example.com/approve"
-          value={urlInput}
-          onChange={(e) => setUrlInput(e.target.value)}
-          onBlur={() => void commitUrl()}
-          style={{
-            flex: 1,
-            fontSize: 12,
-            padding: "2px 6px",
-            background: "var(--bg-surface)",
-            border: "0.5px solid var(--border)",
-            borderRadius: 3,
-            color: "var(--text-primary)",
-          }}
-        />
-      </div>
+      <StatRow
+        label="Endpoint URL"
+        value={
+          <input
+            type="text"
+            placeholder="https://example.com/approve"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onBlur={() => void commitUrl()}
+            style={{
+              width: "100%",
+              fontSize: "var(--fs-small)",
+              padding: "2px 6px",
+              background: "var(--bg-surface)",
+              border: "0.5px solid var(--border)",
+              borderRadius: 3,
+              color: "var(--text-primary)",
+            }}
+          />
+        }
+      />
       {urlError && (
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--deny-text)",
-            paddingLeft: 118,
-          }}
-        >
+        <div style={{ fontSize: "var(--fs-small)", color: "var(--sem-deny)", paddingLeft: 132 }}>
           {urlError}
         </div>
       )}
 
       {/* Auth header */}
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <span
-          style={{ width: 110, fontSize: 12, color: "var(--text-secondary)" }}
-        >
-          Auth header
-        </span>
-        <input
-          type="text"
-          placeholder="Authorization: Bearer xxx"
-          value={authInput}
-          onChange={(e) => setAuthInput(e.target.value)}
-          onBlur={() => void commitAuth()}
-          style={{
-            flex: 1,
-            fontSize: 12,
-            padding: "2px 6px",
-            background: "var(--bg-surface)",
-            border: "0.5px solid var(--border)",
-            borderRadius: 3,
-            color: "var(--text-primary)",
-          }}
-        />
-      </div>
+      <StatRow
+        label="Auth header"
+        value={
+          <input
+            type="text"
+            placeholder="Authorization: Bearer xxx"
+            value={authInput}
+            onChange={(e) => setAuthInput(e.target.value)}
+            onBlur={() => void commitAuth()}
+            style={{
+              width: "100%",
+              fontSize: "var(--fs-small)",
+              padding: "2px 6px",
+              background: "var(--bg-surface)",
+              border: "0.5px solid var(--border)",
+              borderRadius: 3,
+              color: "var(--text-primary)",
+            }}
+          />
+        }
+      />
       {authError && (
-        <div
-          style={{
-            fontSize: 11,
-            color: "var(--deny-text)",
-            paddingLeft: 118,
-          }}
-        >
+        <div style={{ fontSize: "var(--fs-small)", color: "var(--sem-deny)", paddingLeft: 132 }}>
           {authError}
         </div>
       )}
 
       {/* Call timeout */}
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <span
-          style={{ width: 110, fontSize: 12, color: "var(--text-secondary)" }}
-        >
-          Call timeout (s)
-        </span>
-        <input
-          type="number"
-          min={5}
-          value={timeoutInput}
-          onChange={(e) => setTimeoutInput(e.target.value)}
-          onBlur={() => void commitTimeout()}
-          style={{
-            width: 80,
-            fontSize: 12,
-            padding: "2px 6px",
-            background: "var(--bg-surface)",
-            border: "0.5px solid var(--border)",
-            borderRadius: 3,
-            color: "var(--text-primary)",
-          }}
-        />
-      </div>
+      <StatRow
+        label="Call timeout (s)"
+        value={
+          <input
+            type="number"
+            min={5}
+            value={timeoutInput}
+            onChange={(e) => setTimeoutInput(e.target.value)}
+            onBlur={() => void commitTimeout()}
+            style={{
+              width: 80,
+              fontSize: "var(--fs-small)",
+              padding: "2px 6px",
+              background: "var(--bg-surface)",
+              border: "0.5px solid var(--border)",
+              borderRadius: 3,
+              color: "var(--text-primary)",
+            }}
+          />
+        }
+      />
 
       {/* Test endpoint */}
-      <div className="flex items-center" style={{ gap: 8 }}>
-        <span style={{ width: 110 }} />
-        <button
-          type="button"
-          onClick={() => void runTest()}
-          disabled={testing || !config?.endpoint_url}
-          style={{
-            fontSize: 11,
-            padding: "2px 8px",
-            cursor:
-              testing || !config?.endpoint_url ? "not-allowed" : "pointer",
-            opacity: testing || !config?.endpoint_url ? 0.6 : 1,
-          }}
-        >
-          {testing ? "Testing…" : "Test endpoint"}
-        </button>
-        {lastTest && lastTest.ok && (
-          <span
-            style={{
-              fontSize: 11,
-              color: "var(--approve-text)",
-              fontFamily: "monospace",
-            }}
+      <StatRow
+        label=""
+        value={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {lastTest && lastTest.ok && (
+              <span
+                style={{
+                  fontSize: "var(--fs-small)",
+                  color: "var(--approve-text)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                ✓ {lastTest.verdict} · {lastTest.elapsedMs.toFixed(0)}ms
+              </span>
+            )}
+            {lastTest && !lastTest.ok && (
+              <span
+                style={{
+                  fontSize: "var(--fs-small)",
+                  color: "var(--sem-deny)",
+                  fontFamily: "var(--font-mono)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={lastTest.error}
+              >
+                ✗ {lastTest.error}
+              </span>
+            )}
+          </div>
+        }
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => void runTest()}
+            disabled={testing || !config?.endpoint_url}
           >
-            ✓ {lastTest.verdict} · {lastTest.elapsedMs.toFixed(0)}ms
-          </span>
-        )}
-        {lastTest && !lastTest.ok && (
-          <span
-            style={{
-              fontSize: 11,
-              color: "var(--deny-text)",
-              fontFamily: "monospace",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-            title={lastTest.error}
-          >
-            ✗ {lastTest.error}
-          </span>
-        )}
-      </div>
-    </section>
+            {testing ? "Testing…" : "Test endpoint"}
+          </Button>
+        }
+      />
+    </div>
   );
 }

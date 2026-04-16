@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAgentConfig } from "../hooks/useAgentConfig";
+import Button from "./ui/Button";
+import StatRow from "./ui/StatRow";
 
 export default function AgentApproveSection() {
   const {
@@ -56,55 +58,36 @@ export default function AgentApproveSection() {
   const configured = config?.workspace_path != null;
 
   return (
-    <section
+    <div
       id="agent-approve-section"
       className="flex flex-col"
-      style={{ padding: "12px 16px", gap: 10, borderTop: "0.5px solid var(--border)" }}
+      style={{ gap: 10 }}
     >
-      <h2
-        className="font-semibold text-[var(--text-primary)]"
-        style={{ fontSize: 13, margin: 0 }}
-      >
-        Agent Approve <span style={{ color: "var(--text-tertiary)", fontWeight: 400 }}>(experimental)</span>
-      </h2>
-      <div className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
+      <div style={{ fontSize: "var(--fs-small)", color: "var(--text-tertiary)" }}>
         Delegate tool-use approvals to a headless Claude Code agent running in a
         dedicated workspace.
       </div>
 
       {!configured && (
         <div className="flex flex-col" style={{ gap: 6 }}>
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => void createDefault()}
             disabled={busy}
-            style={{
-              fontSize: 12,
-              padding: "4px 10px",
-              alignSelf: "flex-start",
-              background: "var(--accent-green-dark)",
-              color: "#FFFFFF",
-              border: "none",
-              borderRadius: 4,
-              cursor: busy ? "not-allowed" : "pointer",
-              opacity: busy ? 0.6 : 1,
-            }}
+            style={{ alignSelf: "flex-start" }}
           >
             {busy ? "Creating…" : "Create default workspace"}
-          </button>
+          </Button>
           {error && (
             <div
               className="flex items-center"
-              style={{ gap: 8, fontSize: 11, color: "var(--deny-text)" }}
+              style={{ gap: 8, fontSize: "var(--fs-small)", color: "var(--sem-deny)" }}
             >
               <span>{error}</span>
-              <button
-                type="button"
-                onClick={() => void createDefault()}
-                style={{ fontSize: 11, padding: "2px 6px" }}
-              >
+              <Button variant="ghost" size="sm" onClick={() => void createDefault()}>
                 Retry
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -113,195 +96,160 @@ export default function AgentApproveSection() {
       {configured && (
         <>
           {/* Workspace path row */}
-          <div className="flex items-center" style={{ gap: 8 }}>
-            <span
-              style={{ width: 110, fontSize: 12, color: "var(--text-secondary)" }}
-            >
-              Workspace
-            </span>
-            <span
-              style={{
-                flex: 1,
-                fontSize: 11,
-                fontFamily: "monospace",
-                color: "var(--text-primary)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-              title={config!.workspace_path ?? ""}
-            >
-              {config!.workspace_path}
-            </span>
-            <button
-              type="button"
-              onClick={() => void pickWorkspace()}
-              style={{ fontSize: 12, padding: "2px 8px" }}
-            >
-              Browse…
-            </button>
-          </div>
+          <StatRow
+            label="Workspace"
+            mono
+            value={config!.workspace_path ?? ""}
+            action={
+              <Button variant="secondary" size="sm" onClick={() => void pickWorkspace()}>
+                Browse…
+              </Button>
+            }
+          />
 
           {/* Status row */}
-          <div className="flex items-center" style={{ gap: 8 }}>
-            <span style={{ width: 110 }} />
-            <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 999,
-                background: config!.is_default_workspace
-                  ? "var(--accent-green)"
-                  : "var(--accent-amber)",
-                display: "inline-block",
-              }}
-            />
-            <span style={{ fontSize: 11, color: "var(--text-secondary)", flex: 1 }}>
-              {config!.is_default_workspace
-                ? "Using default workspace"
-                : "Custom workspace"}
-            </span>
-            {config!.is_default_workspace ? (
-              <button
-                type="button"
-                onClick={() => void confirmReset()}
-                disabled={busy}
-                style={{
-                  fontSize: 11,
-                  padding: "2px 8px",
-                  color: "var(--deny-text)",
-                }}
-              >
-                Reset workspace
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void useDefaultInstead()}
-                disabled={busy}
-                style={{ fontSize: 11, padding: "2px 8px" }}
-              >
-                Use default instead
-              </button>
-            )}
-          </div>
+          <StatRow
+            label="Status"
+            value={
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 999,
+                    background: config!.is_default_workspace
+                      ? "var(--accent-green)"
+                      : "var(--accent-amber)",
+                    display: "inline-block",
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ fontSize: "var(--fs-small)", color: "var(--text-secondary)" }}>
+                  {config!.is_default_workspace
+                    ? "Using default workspace"
+                    : "Custom workspace"}
+                </span>
+              </span>
+            }
+            action={
+              config!.is_default_workspace ? (
+                <Button
+                  variant="secondary"
+                  tone="danger"
+                  size="sm"
+                  onClick={() => void confirmReset()}
+                  disabled={busy}
+                >
+                  Reset workspace
+                </Button>
+              ) : (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => void useDefaultInstead()}
+                  disabled={busy}
+                >
+                  Use default instead
+                </Button>
+              )
+            }
+          />
 
           {!config!.is_default_workspace && (
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--badge-permission-text)",
-                paddingLeft: 118,
-              }}
-            >
+            <div style={{ fontSize: "var(--fs-small)", color: "var(--text-tertiary)", paddingLeft: 132 }}>
               Make sure this workspace has no hooks pointing back to GAI, or you
               may deadlock.
             </div>
           )}
 
           {error && (
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--deny-text)",
-                paddingLeft: 118,
-              }}
-            >
+            <div style={{ fontSize: "var(--fs-small)", color: "var(--sem-deny)", paddingLeft: 132 }}>
               {error}
             </div>
           )}
 
           {/* Turn limit */}
-          <div className="flex items-center" style={{ gap: 8 }}>
-            <span
-              style={{ width: 110, fontSize: 12, color: "var(--text-secondary)" }}
-            >
-              Turn limit
-            </span>
-            <input
-              type="number"
-              min={1}
-              value={turnLimitInput}
-              onChange={(e) => setTurnLimitInput(e.target.value)}
-              onBlur={() => {
-                const n = parseInt(turnLimitInput, 10);
-                if (Number.isFinite(n) && n >= 1 && n !== config!.turn_limit) {
-                  void setTurnLimit(n);
-                }
-              }}
-              style={{
-                width: 80,
-                fontSize: 12,
-                padding: "2px 6px",
-                background: "var(--bg-surface)",
-                border: "0.5px solid var(--border)",
-                borderRadius: 3,
-                color: "var(--text-primary)",
-              }}
-            />
-            <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-              Reset the agent session after this many calls
-            </span>
-          </div>
+          <StatRow
+            label="Turn limit"
+            value={
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="number"
+                  min={1}
+                  value={turnLimitInput}
+                  onChange={(e) => setTurnLimitInput(e.target.value)}
+                  onBlur={() => {
+                    const n = parseInt(turnLimitInput, 10);
+                    if (Number.isFinite(n) && n >= 1 && n !== config!.turn_limit) {
+                      void setTurnLimit(n);
+                    }
+                  }}
+                  style={{
+                    width: 80,
+                    fontSize: "var(--fs-small)",
+                    padding: "2px 6px",
+                    background: "var(--bg-surface)",
+                    border: "0.5px solid var(--border)",
+                    borderRadius: 3,
+                    color: "var(--text-primary)",
+                  }}
+                />
+                <span style={{ fontSize: "var(--fs-small)", color: "var(--text-tertiary)" }}>
+                  Reset the agent session after this many calls
+                </span>
+              </div>
+            }
+          />
 
           {/* Call timeout */}
-          <div className="flex items-center" style={{ gap: 8 }}>
-            <span
-              style={{ width: 110, fontSize: 12, color: "var(--text-secondary)" }}
-            >
-              Call timeout (s)
-            </span>
-            <input
-              type="number"
-              min={5}
-              value={timeoutInput}
-              onChange={(e) => setTimeoutInput(e.target.value)}
-              onBlur={() => {
-                const n = parseInt(timeoutInput, 10);
-                if (
-                  Number.isFinite(n) &&
-                  n >= 5 &&
-                  n !== config!.call_timeout_secs
-                ) {
-                  void setCallTimeout(n);
-                }
-              }}
-              style={{
-                width: 80,
-                fontSize: 12,
-                padding: "2px 6px",
-                background: "var(--bg-surface)",
-                border: "0.5px solid var(--border)",
-                borderRadius: 3,
-                color: "var(--text-primary)",
-              }}
-            />
-          </div>
+          <StatRow
+            label="Call timeout (s)"
+            value={
+              <input
+                type="number"
+                min={5}
+                value={timeoutInput}
+                onChange={(e) => setTimeoutInput(e.target.value)}
+                onBlur={() => {
+                  const n = parseInt(timeoutInput, 10);
+                  if (
+                    Number.isFinite(n) &&
+                    n >= 5 &&
+                    n !== config!.call_timeout_secs
+                  ) {
+                    void setCallTimeout(n);
+                  }
+                }}
+                style={{
+                  width: 80,
+                  fontSize: "var(--fs-small)",
+                  padding: "2px 6px",
+                  background: "var(--bg-surface)",
+                  border: "0.5px solid var(--border)",
+                  borderRadius: 3,
+                  color: "var(--text-primary)",
+                }}
+              />
+            }
+          />
 
           {/* Session row */}
-          <div className="flex items-center" style={{ gap: 8 }}>
-            <span style={{ width: 110 }} />
-            <button
-              type="button"
-              onClick={() => void resetSession()}
-              style={{ fontSize: 11, padding: "2px 8px" }}
-            >
-              Reset agent session now
-            </button>
-            <span
-              style={{
-                fontSize: 11,
-                color: "var(--text-tertiary)",
-                fontFamily: "monospace",
-              }}
-            >
-              {session
-                ? `Session: ${session.session_id.slice(0, 10)}… · ${session.turn_count}/${config!.turn_limit} turns`
-                : "No active session"}
-            </span>
-          </div>
+          <StatRow
+            label="Session"
+            mono
+            value={
+              session
+                ? `${session.session_id.slice(0, 10)}… · ${session.turn_count}/${config!.turn_limit} turns`
+                : "No active session"
+            }
+            action={
+              <Button variant="ghost" size="sm" onClick={() => void resetSession()}>
+                Reset now
+              </Button>
+            }
+          />
         </>
       )}
-    </section>
+    </div>
   );
 }
