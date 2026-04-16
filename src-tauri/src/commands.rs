@@ -64,7 +64,7 @@ pub fn get_app_settings() -> AppSettings {
 }
 
 #[tauri::command]
-pub fn update_app_settings(patch: Value) -> AppSettings {
+pub fn update_app_settings(app: tauri::AppHandle, patch: Value) -> AppSettings {
     let mut current = app_settings::get();
     if let Some(b) = patch.get("toast_enabled").and_then(|v| v.as_bool()) {
         current.toast_enabled = b;
@@ -84,6 +84,9 @@ pub fn update_app_settings(patch: Value) -> AppSettings {
     if let Some(b) = patch.get("log_to_file").and_then(|v| v.as_bool()) {
         current.log_to_file = b;
     }
+    if let Some(s) = patch.get("theme").and_then(|v| v.as_str()) {
+        current.theme = s.to_string();
+    }
     if let Some(p) = patch.get("port").and_then(|v| v.as_u64()) {
         let new_port = p as u16;
         if new_port != current.port {
@@ -96,7 +99,9 @@ pub fn update_app_settings(patch: Value) -> AppSettings {
             current.port = new_port;
         }
     }
-    app_settings::set(current)
+    let saved = app_settings::set(current);
+    let _ = app.emit("app_settings_changed", &saved);
+    saved
 }
 
 #[tauri::command]

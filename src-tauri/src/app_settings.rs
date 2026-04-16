@@ -71,6 +71,12 @@ pub struct AppSettings {
     pub max_dynamic_sessions: u32,
     #[serde(default)]
     pub audit_skip_unpinned_delete_confirm: bool,
+    #[serde(default = "default_theme")]
+    pub theme: String,
+}
+
+fn default_theme() -> String {
+    "system".to_string()
 }
 
 fn default_hotkey_toggle_window() -> String {
@@ -112,6 +118,7 @@ impl Default for AppSettings {
             audit_history_enabled: false,
             max_dynamic_sessions: 50,
             audit_skip_unpinned_delete_confirm: false,
+            theme: default_theme(),
         }
     }
 }
