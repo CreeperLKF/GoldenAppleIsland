@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="logo.png" width="36" height="36" alt="Golden Apple Island" valign="middle">&nbsp;
+  <img src="logo.png" width="64" height="64" alt="Golden Apple Island" valign="middle">&nbsp;
   Golden Apple Island
 </h1>
 <p align="center">
