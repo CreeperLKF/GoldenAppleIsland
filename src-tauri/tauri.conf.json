@@ -51,6 +51,7 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
+        "installerFilename": "GoldenAppleIsland_${version}_x64-setup",
         "languages": [
           "English"
         ]
