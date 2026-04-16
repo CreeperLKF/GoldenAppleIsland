@@ -1,126 +1,213 @@
+/* ============================================================
+   Golden Apple Island — Design Tokens
+   See docs/design.md § 2 (Color) / § 3 (Typography) / § 4 (Spacing)
+   ============================================================ */
+
+/* ---------- Fonts ---------- */
+@font-face {
+  font-family: "Geist";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: local("Geist Regular"), url("../assets/fonts/geist/Geist-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: local("Geist Medium"), url("../assets/fonts/geist/Geist-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Geist";
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+  src: local("Geist SemiBold"), url("../assets/fonts/geist/Geist-SemiBold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: local("JetBrains Mono"), url("../assets/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: local("JetBrains Mono Medium"), url("../assets/fonts/jetbrains-mono/JetBrainsMono-Medium.woff2") format("woff2");
+}
+
 :root {
-  --bg-base: #FFFFFF;
-  --bg-surface: #F5F5F3;
-  --bg-elevated: #FFFFFF;
-  --text-primary: #1D1D1F;
-  --text-secondary: #6E6E73;
-  --text-tertiary: #AEAEB2;
-  --border: rgba(0, 0, 0, 0.08);
+  /* ================================================
+     FONT STACKS
+     ================================================ */
+  --font-ui: "Geist", "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", "Cascadia Mono", ui-monospace, Menlo, Consolas, monospace;
 
-  --approve-bg: #E8F5E9;
-  --approve-text: #2E7D32;
-  --deny-bg: #FFEBEE;
-  --deny-text: #C62828;
+  /* ================================================
+     TYPE SCALE
+     ================================================ */
+  --fs-display: 18px;   --lh-display: 1.20;   --fw-display: 600;
+  --fs-title:   14px;   --lh-title:   1.30;   --fw-title:   600;
+  --fs-body:    13px;   --lh-body:    1.45;   --fw-body:    400;
+  --fs-small:   12px;   --lh-small:   1.35;   --fw-small:   400;
+  --fs-caption: 11px;   --lh-caption: 1.30;   --fw-caption: 500;
+  --fs-micro:   10px;   --lh-micro:   1.20;   --fw-micro:   500;
 
-  --badge-shell-bg: #FFF3E0;
-  --badge-shell-text: #E65100;
-  --badge-write-bg: #E3F2FD;
-  --badge-write-text: #1565C0;
-  --badge-read-bg: #F5F5F3;
-  --badge-read-text: #6E6E73;
-  --badge-tool-bg: #F5F5F3;
-  --badge-tool-text: #6E6E73;
-  --badge-question-bg: #F3E8FD;
-  --badge-question-text: #7B1FA2;
-  --badge-permission-bg: #FFF8E1;
-  --badge-permission-text: #F57F17;
+  --fs-mono:    13px;   --lh-mono:    1.50;
+  --fs-mono-sm: 12px;   --lh-mono-sm: 1.40;
+  --fs-mono-xs: 11px;
 
-  --input-bg: #FFFFFF;
-  --input-border: rgba(0, 0, 0, 0.15);
-  --input-text: #1D1D1F;
-  --input-placeholder: #AEAEB2;
+  /* ================================================
+     SPACING (6 step scale)
+     ================================================ */
+  --sp-1: 2px;   --sp-2: 4px;   --sp-3: 6px;   --sp-4: 8px;
+  --sp-5: 10px;  --sp-6: 12px;  --sp-7: 14px;  --sp-8: 16px;
+  --sp-10: 20px; --sp-12: 24px; --sp-16: 32px;
 
-  --session-approve-bg: #E3F2FD;
-  --session-approve-text: #1565C0;
+  /* ================================================
+     RADIUS
+     ================================================ */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;  /* 浮窗外壳 */
 
-  --accent-green: #34C759;
+  /* ================================================
+     COLORS — DARK (default)
+     ================================================ */
+  --bg-base:      #0A0A0B;
+  --bg-surface:   #111113;
+  --bg-elevated:  #18181B;
+  --bg-subtle:    #1F1F23;
+
+  --border:        rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.10);
+  --border-gold:   rgba(230, 179, 37, 0.22);
+
+  --text-primary:   #FAFAFA;
+  --text-secondary: #A1A1AA;
+  --text-tertiary:  #71717A;
+  --text-muted:     #52525B;
+
+  /* Guardian Gold */
+  --gold:       #E6B325;
+  --gold-hi:    #FFD256;
+  --gold-lo:    #8B6914;
+  --gold-ink:   #0A0A0B;
+  --gold-glow:  rgba(230, 179, 37, 0.18);
+  --gold-line:  rgba(230, 179, 37, 0.40);
+
+  /* Semantic */
+  --sem-approve: #22C55E;
+  --sem-deny:    #F43F5E;
+  --sem-warn:    #F59E0B;
+  --sem-info:    #3B82F6;
+  --sem-violet:  #A78BFA;
+
+  /* Category (vein color on cards) */
+  --cat-shell:      #F59E0B;
+  --cat-write:      #60A5FA;
+  --cat-read:       #94A3B8;
+  --cat-search:     #64748B;
+  --cat-question:   #A78BFA;
+  --cat-permission: #F59E0B;
+  --cat-tool:       #71717A;
+
+  --focus-ring: rgba(230, 179, 37, 0.60);
+  --scrim:      rgba(10, 10, 11, 0.72);
+
+  /* ================================================
+     COMPAT LAYER — 临时兼容当前组件使用的旧变量名
+     Phase 4-6 逐步去掉,避免本阶段改动爆炸
+     ================================================ */
+  --approve-bg:   transparent;       /* approve 按钮改为金底,不再用这个浅绿 */
+  --approve-text: var(--sem-approve);
+  --deny-bg:      transparent;
+  --deny-text:    var(--sem-deny);
+
+  --badge-shell-bg:      rgba(245, 158, 11, 0.10);
+  --badge-shell-text:    var(--cat-shell);
+  --badge-write-bg:      rgba(96, 165, 250, 0.10);
+  --badge-write-text:    var(--cat-write);
+  --badge-read-bg:       rgba(148, 163, 184, 0.08);
+  --badge-read-text:     var(--cat-read);
+  --badge-tool-bg:       rgba(113, 113, 122, 0.10);
+  --badge-tool-text:     var(--cat-tool);
+  --badge-question-bg:   rgba(167, 139, 250, 0.10);
+  --badge-question-text: var(--cat-question);
+  --badge-permission-bg: rgba(245, 158, 11, 0.10);
+  --badge-permission-text: var(--cat-permission);
+
+  --input-bg:          var(--bg-subtle);
+  --input-border:      var(--border-strong);
+  --input-text:        var(--text-primary);
+  --input-placeholder: var(--text-muted);
+
+  --session-approve-bg:   rgba(59, 130, 246, 0.12);
+  --session-approve-text: var(--sem-info);
+
+  --accent-green:      var(--sem-approve);
   --accent-green-dark: #1F8A3C;
-  --accent-amber: #FF9F0A;
-
-  --font-title: 13px;
-  --font-body: 12px;
-  --font-mono: 13px;
-  --font-badge: 11px;
-  --font-meta: 11px;
-  --font-button: 13px;
+  --accent-amber:      var(--cat-shell);
 }
 
-.dark {
-  --bg-base: #1C1C1E;
-  --bg-surface: #2C2C2E;
-  --bg-elevated: #3A3A3C;
-  --text-primary: #F5F5F7;
-  --text-secondary: #A1A1A6;
-  --text-tertiary: #636366;
-  --border: rgba(255, 255, 255, 0.1);
+/* ================================================
+   LIGHT MODE (class-based opt-in; see index.css)
+   ================================================ */
+:root.light,
+:root[data-theme="light"] {
+  --bg-base:      #FBFBFA;
+  --bg-surface:   #FFFFFF;
+  --bg-elevated:  #FFFFFF;
+  --bg-subtle:    #F4F4F3;
 
-  --approve-bg: #1B3A1F;
-  --approve-text: #81C784;
-  --deny-bg: #3A1B1B;
-  --deny-text: #EF9A9A;
+  --border:        rgba(9, 9, 11, 0.08);
+  --border-strong: rgba(9, 9, 11, 0.12);
+  --border-gold:   rgba(194, 146, 0, 0.35);
 
-  --badge-shell-bg: #3A2A10;
-  --badge-shell-text: #FFB74D;
-  --badge-write-bg: #0D2744;
-  --badge-write-text: #64B5F6;
-  --badge-read-bg: #2C2C2E;
-  --badge-read-text: #A1A1A6;
-  --badge-tool-bg: #2C2C2E;
-  --badge-tool-text: #A1A1A6;
-  --badge-question-bg: #2A1540;
-  --badge-question-text: #CE93D8;
-  --badge-permission-bg: #3A3010;
-  --badge-permission-text: #FFD54F;
+  --text-primary:   #09090B;
+  --text-secondary: #52525B;
+  --text-tertiary:  #71717A;
+  --text-muted:     #A1A1AA;
 
-  --input-bg: #1C1C1E;
-  --input-border: rgba(255, 255, 255, 0.15);
-  --input-text: #F5F5F7;
-  --input-placeholder: #636366;
+  --gold:       #C29200;
+  --gold-hi:    #E6B325;
+  --gold-lo:    #8B6914;
+  --gold-ink:   #FFFFFF;
+  --gold-glow:  rgba(194, 146, 0, 0.14);
+  --gold-line:  rgba(194, 146, 0, 0.30);
 
-  --session-approve-bg: #0D2744;
-  --session-approve-text: #64B5F6;
+  --sem-approve: #16A34A;
+  --sem-deny:    #DC2626;
+  --sem-warn:    #D97706;
+  --sem-info:    #2563EB;
+  --sem-violet:  #7C3AED;
 
-  --accent-green: #30D158;
-  --accent-green-dark: #2FA94A;
+  --cat-shell:      #D97706;
+  --cat-write:      #2563EB;
+  --cat-read:       #64748B;
+  --cat-search:     #64748B;
+  --cat-question:   #7C3AED;
+  --cat-permission: #D97706;
+  --cat-tool:       #71717A;
+
+  --focus-ring: rgba(194, 146, 0, 0.60);
+  --scrim:      rgba(9, 9, 11, 0.50);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-base: #1C1C1E;
-    --bg-surface: #2C2C2E;
-    --bg-elevated: #3A3A3C;
-    --text-primary: #F5F5F7;
-    --text-secondary: #A1A1A6;
-    --text-tertiary: #636366;
-    --border: rgba(255, 255, 255, 0.1);
-
-    --approve-bg: #1B3A1F;
-    --approve-text: #81C784;
-    --deny-bg: #3A1B1B;
-    --deny-text: #EF9A9A;
-
-    --badge-shell-bg: #3A2A10;
-    --badge-shell-text: #FFB74D;
-    --badge-write-bg: #0D2744;
-    --badge-write-text: #64B5F6;
-    --badge-read-bg: #2C2C2E;
-    --badge-read-text: #A1A1A6;
-    --badge-tool-bg: #2C2C2E;
-    --badge-tool-text: #A1A1A6;
-    --badge-question-bg: #2A1540;
-    --badge-question-text: #CE93D8;
-    --badge-permission-bg: #3A3010;
-    --badge-permission-text: #FFD54F;
-
-    --input-bg: #1C1C1E;
-    --input-border: rgba(255, 255, 255, 0.15);
-    --input-text: #F5F5F7;
-    --input-placeholder: #636366;
-
-    --session-approve-bg: #0D2744;
-    --session-approve-text: #64B5F6;
-
-    --accent-green: #30D158;
-    --accent-green-dark: #2FA94A;
+/* ================================================
+   AUTO DARK (prefers-color-scheme)
+   ================================================ */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark):not([data-theme="dark"]) {
+    /* 把 light 的所有变量再抄一遍到这里,
+       或者保持 dark-default,让用户手动切换。
+       推荐:保持 dark-default,Light 只通过 class/data-theme 启用。
+       —— 浮窗桌面应用,深色是更好的默认。 */
   }
 }

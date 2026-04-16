@@ -8,11 +8,13 @@ html, body, #root {
 
 body {
   margin: 0;
-  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-ui);
+  font-feature-settings: "ss01", "cv01", "tnum";
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: 13px;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
 }
 
 #root {
@@ -22,43 +24,84 @@ body {
   padding: 0;
 }
 
-@keyframes slide-down-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ---------- Focus ring (Gold) ---------- */
+*:focus { outline: none; }
+*:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[role="switch"]:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
 }
 
+/* ---------- Typography utilities ---------- */
+.mono,
+code,
+pre {
+  font-family: var(--font-mono);
+  font-feature-settings: "calt", "liga";
+}
+.tabular { font-variant-numeric: tabular-nums; }
+.caption {
+  font-size: var(--fs-caption);
+  line-height: var(--lh-caption);
+  font-weight: var(--fw-caption);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* ---------- Animations ---------- */
+:root {
+  --ease-out-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-out-snap:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out:     cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .card-enter {
-  animation: slide-down-fade-in 150ms ease-out;
+  animation: card-enter 200ms var(--ease-out-smooth) both;
+}
+
+@keyframes apple-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0 var(--gold-glow)); }
+  50%      { filter: drop-shadow(0 0 6px var(--gold-glow)); }
+}
+.brand-mark--live {
+  animation: apple-pulse 4s ease-in-out infinite;
 }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  to   { transform: rotate(360deg); }
 }
-
 .spin {
   display: inline-block;
   animation: spin 1.2s linear infinite;
 }
 
-code, pre, .mono {
-  font-family: "Cascadia Code", "Cascadia Mono", ui-monospace, Menlo, Consolas, monospace;
+@keyframes gold-flash {
+  0%   { box-shadow: 0 0 0 0 var(--gold), 0 0 0 0 var(--gold-glow); }
+  100% { box-shadow: 0 0 0 0 transparent, 0 0 0 8px transparent; }
+}
+.gold-flash {
+  animation: gold-flash 400ms ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    transition-duration: 0ms !important;
     animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0ms !important;
   }
-}
-
-button:focus-visible {
-  outline: 2px solid #0A84FF;
-  outline-offset: 1px;
 }
