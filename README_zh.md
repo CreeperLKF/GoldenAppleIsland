@@ -23,6 +23,8 @@
 - **专为 Windows 开发者打造。** 原生托盘图标、Windows 通知、键盘快捷键，弹出窗口会记住你上次拖放的位置 — 无需切换终端。
 - **无论 Claude Code 在哪运行都能接入。** 目前原生支持 WSL；SSH 支持在规划中。一个托盘应用即可服务你机器上的所有发行版和主机。
 - **灵活组合的审批策略。** 全局、按发行版、按文件夹、按会话的规则沿清晰的优先级链解析 — 将可信工作区设为自动审批，生产环境保持手动，其余无需操心。Hook 模式同样可配置，满足更深层需求。
+- **可自定义的 Hook 管理。** Golden Apple Island 管理连接 Claude Code 与托盘应用的 Hook 脚本。你可以配置哪些 Hook 类型生效、按发行版或文件夹设置不同行为，应用会自动保持一切同步 — 无需手动编辑 `settings.json`。
+- **让另一个 Agent 或你自己 vibe 出来的服务来做决定。** Agent Approve 会启动第二个 Claude Code 实例作为安全审查员，逐条审阅请求并返回批准 / 拒绝 / 上报。[ALICE](https://github.com/CreeperLKF/ALICE) 项目提供开箱即用的审查配置 — 一个 "Alice" Agent 负责审计 "Bob"（你的工作 Agent）的行为。External Approve 则通过 HTTP 实现同样的功能，任何你自行搭建或 vibe-code 出来的服务都能作为决策者接入。
 
 ## 快速开始
 

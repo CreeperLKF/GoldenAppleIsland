@@ -23,6 +23,8 @@ Anyone who runs Claude Code on Windows — natively, through WSL, or over SSH (c
 - **Built for Windows developers.** Native tray icon, Windows toasts, keyboard shortcuts, and popups that remember where you dragged them — no terminal context-switching.
 - **Meets Claude Code wherever it runs.** First-class WSL today; SSH on the roadmap. One tray app can serve every distro and host on your machine at once.
 - **Approval policies that compose.** Global, per-distribution, per-folder, and per-session rules resolve along a clear precedence chain — mark a trusted workspace auto-approve, keep production manual, and forget about the rest. Hook modes are equally configurable for when you need to go deeper.
+- **Hooks you can customize.** Golden Apple Island manages the hook scripts that bridge Claude Code to the tray app. Configure which hook types are active, how they behave per distro or folder, and let the app keep everything in sync — no manual `settings.json` surgery.
+- **Let another agent — or your own vibe-coded service — decide.** Agent Approve spawns a second Claude Code instance as a safety reviewer that reads each request and returns approve / reject / escalate. The [ALICE](https://github.com/CreeperLKF/ALICE) project provides ready-made reviewer profiles — an "Alice" agent that audits what "Bob" (your working agent) is doing. External Approve does the same thing over HTTP, so any service you build or vibe-code can plug in as the decision-maker.
 
 ## Quick start
 
