@@ -63,6 +63,7 @@ export default function PolicyDropdown({
         height,
         fontSize,
         padding: "0 6px",
+        textAlign: "center",
         borderWidth: "0.5px",
         borderStyle: "solid",
         borderColor: "var(--border)",
