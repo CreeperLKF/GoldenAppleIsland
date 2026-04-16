@@ -26,12 +26,6 @@ interface Props {
    * When false, the External option is rendered disabled. Default: true.
    */
   externalConfigured?: boolean;
-  /**
-   * Invoked when the user selects a disabled Agent/External option instead
-   * of the value changing. Call sites use this to open settings or scroll
-   * to the relevant subsection.
-   */
-  onRequestConfigure?: (which: "agent" | "external") => void;
 }
 
 export default function PolicyDropdown({
@@ -44,7 +38,6 @@ export default function PolicyDropdown({
   labels,
   agentConfigured = true,
   externalConfigured = true,
-  onRequestConfigure,
 }: Props) {
   const height = size === "sm" ? 20 : 24;
   const fontSize = size === "sm" ? 11 : 12;
@@ -55,18 +48,7 @@ export default function PolicyDropdown({
   const inheritLabel = labels?.inherit ?? "Use inherited";
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const next = e.target.value as DropdownValue;
-    if (next === "agent" && !agentConfigured) {
-      e.target.value = value;
-      onRequestConfigure?.("agent");
-      return;
-    }
-    if (next === "external" && !externalConfigured) {
-      e.target.value = value;
-      onRequestConfigure?.("external");
-      return;
-    }
-    onChange(next);
+    onChange(e.target.value as DropdownValue);
   };
 
   return (
@@ -90,6 +72,7 @@ export default function PolicyDropdown({
       <option value="manual">{manualLabel}</option>
       <option
         value="agent"
+        disabled={!agentConfigured}
         title={
           !agentConfigured
             ? "Configure in Settings → Approval Policies → Agent Approve"
@@ -97,10 +80,10 @@ export default function PolicyDropdown({
         }
       >
         {agentLabel} (experimental)
-        {!agentConfigured ? " — not configured" : ""}
       </option>
       <option
         value="external"
+        disabled={!externalConfigured}
         title={
           !externalConfigured
             ? "Configure in Settings → Approval Policies → External Approve"
@@ -108,7 +91,6 @@ export default function PolicyDropdown({
         }
       >
         {externalLabel} (experimental)
-        {!externalConfigured ? " — not configured" : ""}
       </option>
     </select>
   );

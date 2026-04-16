@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import type { PolicyKind } from "../types/events";
 import PolicyDropdown, { DropdownValue } from "./ui/PolicyDropdown";
 import PolicySplitButton from "./ui/PolicySplitButton";
@@ -41,10 +40,6 @@ export default function PolicyPanel({
   const { config: externalCfg } = useExternalConfig();
   const agentConfigured = agentCfg?.workspace_path != null;
   const externalConfigured = externalCfg?.endpoint_url != null;
-
-  const onRequestConfigure = () => {
-    void invoke("open_settings_window");
-  };
 
   const onChangeForce = (next: DropdownValue) => {
     if (next === "inherit") {
@@ -92,7 +87,6 @@ export default function PolicyPanel({
             ariaLabel="Session force override"
             agentConfigured={agentConfigured}
             externalConfigured={externalConfigured}
-            onRequestConfigure={onRequestConfigure}
           />
         </div>
 
