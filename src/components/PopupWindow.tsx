@@ -79,7 +79,7 @@ export default function PopupWindow() {
       // frontend side because backend auto-resolution already happens
       // before the event reaches this popup via the separate
       // `hook_event_auto_resolved` channel.
-      const forced = force.get(event.session_id);
+      const forced = force.get();
       if (forced === "auto") {
         // Bypass the pending queue entirely: send the approve response to
         // the backend directly and record it in history as an auto-resolved

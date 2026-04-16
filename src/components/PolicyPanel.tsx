@@ -36,7 +36,7 @@ export default function PolicyPanel({
   onToggleRecent,
 }: Props) {
   const force = useForceOverrides();
-  const current = activeSessionId ? force.get(activeSessionId) : null;
+  const current = force.get();
   const { config: agentCfg } = useAgentConfig();
   const { config: externalCfg } = useExternalConfig();
   const agentConfigured = agentCfg?.workspace_path != null;
@@ -47,11 +47,10 @@ export default function PolicyPanel({
   };
 
   const onChangeForce = (next: DropdownValue) => {
-    if (!activeSessionId) return;
     if (next === "inherit") {
-      force.set(activeSessionId, null);
+      force.set(null);
     } else {
-      force.set(activeSessionId, next);
+      force.set(next);
     }
   };
 
@@ -91,7 +90,6 @@ export default function PolicyPanel({
             onChange={onChangeForce}
             labels={FORCE_LABELS}
             ariaLabel="Session force override"
-            disabled={activeSessionId === null}
             agentConfigured={agentConfigured}
             externalConfigured={externalConfigured}
             onRequestConfigure={onRequestConfigure}
