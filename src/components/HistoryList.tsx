@@ -1,31 +1,27 @@
 import { useEffect, useState } from "react";
 import type { HistoryEntry } from "../hooks/useHistory";
+import { formatAgo } from "../lib/format";
 
 interface HistoryListProps {
   items: HistoryEntry[];
   collapsed: boolean;
 }
 
-function formatAgo(iso: string, now: number): string {
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return "";
-  const secs = Math.max(0, Math.round((now - t) / 1000));
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h`;
-  return `${Math.floor(hrs / 24)}d`;
+function veinColor(item: HistoryEntry): string {
+  if (item.answer) return "var(--sem-violet)";
+  if (item.action === "approve" && item.source === "auto") return "var(--gold-lo)";
+  if (item.action === "approve" && item.source === "agent") return "var(--sem-violet)";
+  if (item.action === "approve" && item.source === "external") return "var(--sem-info)";
+  if (item.action === "approve") return "var(--gold)";
+  if (item.action === "deny") return "var(--sem-deny)";
+  return "var(--text-muted)";
 }
 
-function statusGlyph(item: HistoryEntry): {
-  glyph: string;
-  color: string;
-} {
-  if (item.answer) return { glyph: "💬", color: "var(--badge-question-text)" };
-  if (item.action === "approve") return { glyph: "✓", color: "var(--approve-text)" };
-  if (item.action === "deny") return { glyph: "✗", color: "var(--deny-text)" };
-  return { glyph: "◷", color: "var(--text-tertiary)" };
+function sourceLabel(item: HistoryEntry): string | null {
+  if (item.source === "auto") return "auto";
+  if (item.source === "agent") return "agent";
+  if (item.source === "external") return "ext";
+  return null;
 }
 
 export default function HistoryList({ items, collapsed }: HistoryListProps) {
@@ -43,15 +39,14 @@ export default function HistoryList({ items, collapsed }: HistoryListProps) {
   if (collapsed) {
     return (
       <section
-        className="px-3 py-2 bg-[var(--bg-surface)]"
-        style={{ borderTop: "0.5px solid var(--border)" }}
-        aria-label="Recent decisions (collapsed)"
+        style={{
+          padding: "6px 12px",
+          background: "var(--bg-surface)",
+          boxShadow: "0 0.5px 0 0 var(--border)",
+        }}
       >
-        <div
-          className="font-semibold text-[var(--text-primary)]"
-          style={{ fontSize: 12 }}
-        >
-          Recent
+        <div className="caption" style={{ color: "var(--text-tertiary)" }}>
+          RECENT · {items.length}
         </div>
       </section>
     );
@@ -62,94 +57,87 @@ export default function HistoryList({ items, collapsed }: HistoryListProps) {
 
   return (
     <section
-      className="px-3 py-2 bg-[var(--bg-surface)]"
-      style={{ borderTop: "0.5px solid var(--border)" }}
-      aria-label="Recent decisions"
+      style={{
+        padding: "8px 12px 6px",
+        background: "var(--bg-surface)",
+        boxShadow: "0 0.5px 0 0 var(--border)",
+      }}
     >
-      <div
-        className="font-semibold text-[var(--text-primary)]"
-        style={{ fontSize: 12, marginBottom: 4 }}
-      >
-        Recent
+      <div className="caption" style={{ color: "var(--text-tertiary)", marginBottom: 6 }}>
+        RECENT
       </div>
       <ul
-        className="flex flex-col"
-        style={
-          expanded
-            ? { gap: 0, maxHeight: 280, overflowY: "auto" }
-            : { gap: 0 }
-        }
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 0,
+          listStyle: "none",
+          margin: 0,
+          padding: 0,
+          maxHeight: expanded ? 280 : "none",
+          overflowY: expanded ? "auto" : "visible",
+        }}
       >
         {visible.map((item) => {
-          const { glyph, color } = statusGlyph(item);
+          const tag = sourceLabel(item);
           return (
             <li
               key={item.id}
-              className="flex items-center"
-              style={{ height: 24, fontSize: 12 }}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "2px 1fr auto auto",
+                alignItems: "center",
+                gap: 8,
+                height: 22,
+                padding: "0 0 0 4px",
+                position: "relative",
+              }}
             >
               <span
                 aria-hidden
-                style={{ color, width: 16, display: "inline-block" }}
+                style={{
+                  width: 2, height: 12,
+                  background: veinColor(item),
+                  borderRadius: 1,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "var(--fs-small)",
+                  color: "var(--text-secondary)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
               >
-                {glyph}
+                <span style={{ fontFamily: "var(--font-mono)", color: "var(--text-tertiary)" }}>
+                  {item.tool_name}
+                </span>
+                <span style={{ margin: "0 6px", color: "var(--text-muted)" }}>·</span>
+                {item.summary}
               </span>
-              {item.source === "auto" && (
+              {tag && (
                 <span
                   style={{
+                    fontFamily: "var(--font-mono)",
                     fontSize: 10,
-                    padding: "0 4px",
-                    marginRight: 6,
-                    borderRadius: 3,
-                    background: "var(--bg-elevated)",
-                    color: "var(--text-tertiary)",
-                    border: "0.5px solid var(--border)",
+                    fontStyle: "italic",
+                    color: "var(--text-muted)",
                   }}
-                >
-                  auto
-                </span>
-              )}
-              {item.source === "agent" && (
-                <span
                   title={item.reason ?? undefined}
-                  style={{
-                    fontSize: 10,
-                    padding: "0 4px",
-                    marginRight: 6,
-                    borderRadius: 3,
-                    background: "#EDE7F6",
-                    color: "#4527A0",
-                    border: "0.5px solid #B39DDB",
-                  }}
                 >
-                  agent
-                </span>
-              )}
-              {item.source === "external" && (
-                <span
-                  title={item.reason ?? undefined}
-                  style={{
-                    fontSize: 10,
-                    padding: "0 4px",
-                    marginRight: 6,
-                    borderRadius: 3,
-                    background: "#E0F2F1",
-                    color: "#00695C",
-                    border: "0.5px solid #80CBC4",
-                  }}
-                >
-                  external
+                  {tag}
                 </span>
               )}
               <span
-                className="text-[var(--text-secondary)] flex-1 truncate"
-                style={{ marginRight: 8 }}
-              >
-                {item.tool_name}: {item.summary}
-              </span>
-              <span
-                className="text-[var(--text-tertiary)]"
-                style={{ fontSize: 11 }}
+                className="tabular"
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10,
+                  color: "var(--text-tertiary)",
+                  minWidth: 28,
+                  textAlign: "right",
+                }}
               >
                 {formatAgo(item.timestamp, now)}
               </span>
@@ -161,10 +149,18 @@ export default function HistoryList({ items, collapsed }: HistoryListProps) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1 text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-          style={{ fontSize: 11 }}
+          style={{
+            marginTop: 4,
+            background: "transparent",
+            border: "none",
+            padding: "2px 0",
+            fontSize: 10,
+            color: "var(--text-tertiary)",
+            cursor: "pointer",
+            fontFamily: "var(--font-mono)",
+          }}
         >
-          {expanded ? "Show less" : `Show more (${items.length - 5})`}
+          {expanded ? "− collapse" : `+ show ${items.length - 5} more`}
         </button>
       )}
     </section>

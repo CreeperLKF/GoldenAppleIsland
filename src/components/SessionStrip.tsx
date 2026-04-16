@@ -1,28 +1,42 @@
+import { middleEllipsis } from "../lib/format";
+
 interface SessionStripProps {
   cwd: string;
   autoApprove?: boolean;
 }
 
-function truncate(s: string, n: number): string {
-  if (s.length <= n) return s;
-  return s.slice(0, n - 1) + "\u2026";
-}
-
 export default function SessionStrip({ cwd, autoApprove = false }: SessionStripProps) {
-  const dotColor = autoApprove ? "var(--accent-green)" : "var(--accent-amber)";
   return (
     <div
-      className="flex h-7 items-center px-3 gap-2 bg-[var(--bg-surface)]"
-      style={{ borderBottom: "0.5px solid var(--border)" }}
+      style={{
+        display: "flex", alignItems: "center", gap: 8,
+        height: 26,
+        padding: "0 12px",
+        background: "var(--bg-surface)",
+        boxShadow: "0 0.5px 0 0 var(--border)",
+      }}
     >
       <span
-        className="inline-block rounded-full"
-        style={{ width: 6, height: 6, background: dotColor }}
-        aria-hidden
-      />
-      <span className="text-[var(--text-secondary)]" style={{ fontSize: 12 }}>
-        Session: {truncate(cwd, 35)}
-        {autoApprove ? " (auto)" : ""}
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "var(--fs-mono-xs)",
+          color: "var(--text-tertiary)",
+          textTransform: "lowercase",
+        }}
+      >
+        cwd
+      </span>
+      <span
+        className="mono"
+        style={{
+          fontSize: "var(--fs-mono-sm)",
+          color: autoApprove ? "var(--gold)" : "var(--text-secondary)",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}
+        title={cwd}
+      >
+        {middleEllipsis(cwd, 40)}
+        {autoApprove && <span style={{ marginLeft: 6, opacity: 0.7 }}>· auto</span>}
       </span>
     </div>
   );

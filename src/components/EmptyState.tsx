@@ -3,19 +3,28 @@ interface EmptyStateProps {
 }
 
 export default function EmptyState({ connected }: EmptyStateProps) {
+  const { main, sub } = connected
+    ? { main: "All caught up",      sub: "Waiting for the next tool call…" }
+    : { main: "No active sessions", sub: "Start Claude Code in WSL to begin" };
+
   return (
     <div
-      className="flex flex-col items-center justify-center text-[var(--text-tertiary)]"
-      style={{ padding: "24px 16px", gap: 6, fontSize: 13 }}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "28px 16px",
+        gap: 4,
+        textAlign: "center",
+      }}
     >
-      {connected ? (
-        <div>All caught up</div>
-      ) : (
-        <>
-          <div>No active sessions</div>
-          <div>Start Claude Code in WSL to begin</div>
-        </>
-      )}
+      <div style={{ fontSize: "var(--fs-body)", color: "var(--text-secondary)" }}>
+        {main}
+      </div>
+      <div style={{ fontSize: "var(--fs-small)", color: "var(--text-muted)" }}>
+        {sub}
+      </div>
     </div>
   );
 }
