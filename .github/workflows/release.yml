@@ -38,7 +38,7 @@ jobs:
         run: |
           mkdir -p artifacts
           for f in src-tauri/target/release/bundle/nsis/*.exe; do
-            newname=$(basename "$f" | sed 's/ //g; s/\./_/g; s/_exe$/.exe/')
+            newname=$(basename "$f" | sed 's/ //g')
             cp "$f" "artifacts/$newname"
           done
           ls -la artifacts/
