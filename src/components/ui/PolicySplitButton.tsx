@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { PolicyKind } from "../../types/events";
+import Icon from "./Icon";
 
 export type SplitAction =
   | "default"
@@ -115,7 +116,7 @@ export default function PolicySplitButton({
           borderColor: "var(--border)",
         }}
       >
-        ▼
+        <Icon name="chevron-down" size={10} />
       </button>
       {menuOpen && (
         <div

@@ -55,7 +55,7 @@ export default function WindowsHookSection() {
       : "Not registered"
     : "";
 
-  const statusColor = enabled ? "var(--approve-text)" : "var(--text-tertiary)";
+  const statusColor = enabled ? "var(--sem-approve)" : "var(--text-tertiary)";
 
   return (
     <section className="flex flex-col" style={{ padding: "12px 16px", gap: 10 }}>
@@ -78,9 +78,9 @@ export default function WindowsHookSection() {
           style={{
             fontSize: 12,
             padding: "8px 10px",
-            background: "var(--deny-bg)",
-            color: "var(--deny-text)",
-            border: "0.5px solid var(--deny-text)",
+            background: "transparent",
+            color: "var(--sem-deny)",
+            border: "0.5px solid var(--sem-deny)",
           }}
         >
           {error}

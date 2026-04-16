@@ -118,8 +118,8 @@ export default function AgentApproveSection() {
                     height: 8,
                     borderRadius: 999,
                     background: config!.is_default_workspace
-                      ? "var(--accent-green)"
-                      : "var(--accent-amber)",
+                      ? "var(--sem-approve)"
+                      : "var(--cat-shell)",
                     display: "inline-block",
                     flexShrink: 0,
                   }}

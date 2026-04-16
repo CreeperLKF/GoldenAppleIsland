@@ -203,9 +203,9 @@ export default function AuditHistoryTab() {
                           marginLeft: "auto",
                           color:
                             r.decision === "approve"
-                              ? "var(--approve-text)"
+                              ? "var(--sem-approve)"
                               : r.decision === "deny"
-                                ? "var(--deny-text)"
+                                ? "var(--sem-deny)"
                                 : "var(--text-secondary)",
                         }}
                       >
@@ -317,7 +317,7 @@ function FolderRow({
           <button
             type="button"
             onClick={onDeleteFolder}
-            className="text-[var(--deny-text)] hover:brightness-110"
+            className="text-[var(--sem-deny)] hover:brightness-110"
             style={{ fontSize: 10 }}
           >
             Delete folder
@@ -362,7 +362,7 @@ function SessionRow({
           width: 6,
           height: 6,
           borderRadius: "50%",
-          background: active ? "var(--approve-text)" : "var(--text-tertiary)",
+          background: active ? "var(--sem-approve)" : "var(--text-tertiary)",
         }}
       />
       <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-mono-xs)" }}>{id.slice(0, 10)}</span>
@@ -391,7 +391,7 @@ function SessionRow({
           e.stopPropagation();
           onDelete();
         }}
-        className="text-[var(--deny-text)]"
+        className="text-[var(--sem-deny)]"
         style={{ fontSize: 10 }}
       >
         Del

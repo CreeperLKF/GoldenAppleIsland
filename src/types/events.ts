@@ -116,23 +116,3 @@ export function categorize(toolName: string, variant?: EventVariant): ToolCatego
   if (name === "glob" || name === "grep") return "File search";
   return "Tool call";
 }
-
-export function badgeClass(category: ToolCategory): string {
-  switch (category) {
-    case "Shell command":
-      return "bg-[var(--badge-shell-bg)] text-[var(--badge-shell-text)]";
-    case "File write":
-      return "bg-[var(--badge-write-bg)] text-[var(--badge-write-text)]";
-    case "File read":
-      return "bg-[var(--badge-read-bg)] text-[var(--badge-read-text)]";
-    case "File search":
-      return "bg-[var(--badge-read-bg)] text-[var(--badge-read-text)]";
-    case "Question":
-      return "bg-[var(--badge-question-bg)] text-[var(--badge-question-text)]";
-    case "Permission":
-      return "bg-[var(--badge-permission-bg)] text-[var(--badge-permission-text)]";
-    case "Tool call":
-    default:
-      return "bg-[var(--badge-tool-bg)] text-[var(--badge-tool-text)]";
-  }
-}

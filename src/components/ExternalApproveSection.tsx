@@ -180,7 +180,7 @@ export default function ExternalApproveSection() {
               <span
                 style={{
                   fontSize: "var(--fs-small)",
-                  color: "var(--approve-text)",
+                  color: "var(--sem-approve)",
                   fontFamily: "var(--font-mono)",
                 }}
               >

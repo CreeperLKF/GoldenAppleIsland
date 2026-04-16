@@ -123,3 +123,17 @@ pre {
   0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
   50%      { box-shadow: 0 0 0 4px transparent; }
 }
+
+/* ---------- Scrollbar (webkit) ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); background-clip: padding-box; }
+
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }

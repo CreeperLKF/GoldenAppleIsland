@@ -7,6 +7,7 @@ import { resolvePolicy } from "../lib/resolvePolicy";
 import ResolverPanel from "./ResolverPanel";
 import AgentApproveSection from "./AgentApproveSection";
 import ExternalApproveSection from "./ExternalApproveSection";
+import Icon from "./ui/Icon";
 import type { PolicyKind, RecentSession } from "../types/events";
 
 const SIMPLE_LABELS = { auto: "Auto", manual: "Manual" };
@@ -131,7 +132,7 @@ export default function ApprovalPoliciesSection() {
               aria-label={`Remove ${distro}`}
               style={{ fontSize: 12, color: "var(--text-tertiary)" }}
             >
-              ×
+              <Icon name="x" size={10} />
             </button>
           </div>
         ))}
@@ -202,7 +203,7 @@ export default function ApprovalPoliciesSection() {
               aria-label={`Remove ${path}`}
               style={{ fontSize: 12, color: "var(--text-tertiary)" }}
             >
-              ×
+              <Icon name="x" size={10} />
             </button>
           </div>
         ))}
@@ -283,8 +284,8 @@ export default function ApprovalPoliciesSection() {
                   fontSize: 10,
                   padding: "1px 6px",
                   borderRadius: 3,
-                  background: "var(--badge-permission-bg)",
-                  color: "var(--badge-permission-text)",
+                  background: "rgba(245, 158, 11, 0.10)",
+                  color: "var(--cat-permission)",
                   whiteSpace: "nowrap",
                 }}
               >

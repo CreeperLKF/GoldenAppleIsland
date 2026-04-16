@@ -123,7 +123,7 @@ export default function HotkeyCaptureInput({
         </button>
       </div>
       {error && (
-        <span style={{ fontSize: 11, color: "var(--deny-text)" }}>{error}</span>
+        <span style={{ fontSize: 11, color: "var(--sem-deny)" }}>{error}</span>
       )}
     </div>
   );

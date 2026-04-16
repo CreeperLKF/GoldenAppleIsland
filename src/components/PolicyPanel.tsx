@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { PolicyKind } from "../types/events";
 import PolicyDropdown, { DropdownValue } from "./ui/PolicyDropdown";
 import PolicySplitButton from "./ui/PolicySplitButton";
@@ -27,6 +28,14 @@ export default function PolicyPanel({
   onCommitSessionPolicy, onApproveAll,
   recentVisible, recentCollapsed, onToggleRecent,
 }: Props) {
+  const [flashing, setFlashing] = useState(false);
+
+  const handleApproveAll = () => {
+    onApproveAll();
+    setFlashing(true);
+    window.setTimeout(() => setFlashing(false), 400);
+  };
+
   const force = useForceOverrides();
   const current = force.get();
   const { config: agentCfg } = useAgentConfig();
@@ -121,8 +130,9 @@ export default function PolicyPanel({
       {/* Right: Approve All - stretches to match left column height */}
       <button
         type="button"
-        onClick={onApproveAll}
+        onClick={handleApproveAll}
         disabled={!hasPending}
+        className={flashing ? "gold-flash" : undefined}
         aria-label={
           hasPending
             ? `Approve all ${pendingCount} pending`

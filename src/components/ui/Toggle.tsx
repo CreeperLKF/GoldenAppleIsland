@@ -25,7 +25,7 @@ export default function Toggle({
         height: 20,
         borderRadius: 10,
         padding: 2,
-        background: checked ? "var(--approve-text)" : "var(--text-tertiary)",
+        background: checked ? "var(--sem-approve)" : "var(--text-tertiary)",
         border: "0.5px solid var(--border)",
         justifyContent: checked ? "flex-end" : "flex-start",
       }}

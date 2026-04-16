@@ -121,39 +121,6 @@
   --focus-ring: rgba(230, 179, 37, 0.60);
   --scrim:      rgba(10, 10, 11, 0.72);
 
-  /* ================================================
-     COMPAT LAYER — 临时兼容当前组件使用的旧变量名
-     Phase 4-6 逐步去掉,避免本阶段改动爆炸
-     ================================================ */
-  --approve-bg:   transparent;       /* approve 按钮改为金底,不再用这个浅绿 */
-  --approve-text: var(--sem-approve);
-  --deny-bg:      transparent;
-  --deny-text:    var(--sem-deny);
-
-  --badge-shell-bg:      rgba(245, 158, 11, 0.10);
-  --badge-shell-text:    var(--cat-shell);
-  --badge-write-bg:      rgba(96, 165, 250, 0.10);
-  --badge-write-text:    var(--cat-write);
-  --badge-read-bg:       rgba(148, 163, 184, 0.08);
-  --badge-read-text:     var(--cat-read);
-  --badge-tool-bg:       rgba(113, 113, 122, 0.10);
-  --badge-tool-text:     var(--cat-tool);
-  --badge-question-bg:   rgba(167, 139, 250, 0.10);
-  --badge-question-text: var(--cat-question);
-  --badge-permission-bg: rgba(245, 158, 11, 0.10);
-  --badge-permission-text: var(--cat-permission);
-
-  --input-bg:          var(--bg-subtle);
-  --input-border:      var(--border-strong);
-  --input-text:        var(--text-primary);
-  --input-placeholder: var(--text-muted);
-
-  --session-approve-bg:   rgba(59, 130, 246, 0.12);
-  --session-approve-text: var(--sem-info);
-
-  --accent-green:      var(--sem-approve);
-  --accent-green-dark: #1F8A3C;
-  --accent-amber:      var(--cat-shell);
 }
 
 /* ================================================

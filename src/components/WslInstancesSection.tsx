@@ -62,9 +62,9 @@ export default function WslInstancesSection() {
           style={{
             fontSize: 12,
             padding: "8px 10px",
-            background: "var(--deny-bg)",
-            color: "var(--deny-text)",
-            border: "0.5px solid var(--deny-text)",
+            background: "transparent",
+            color: "var(--sem-deny)",
+            border: "0.5px solid var(--sem-deny)",
           }}
         >
           {error}
@@ -126,7 +126,7 @@ function DistroRow({
     : status.scripts_installed
       ? "Scripts installed, not registered"
       : "Not registered";
-  const statusColor = enabled ? "var(--approve-text)" : "var(--text-tertiary)";
+  const statusColor = enabled ? "var(--sem-approve)" : "var(--text-tertiary)";
 
   return (
     <li
@@ -170,8 +170,8 @@ function DistroRow({
             style={{
               fontSize: "var(--fs-small)",
               padding: "1px 6px",
-              background: isRunning ? "var(--approve-bg)" : "var(--bg-surface)",
-              color: isRunning ? "var(--approve-text)" : "var(--text-tertiary)",
+              background: isRunning ? "rgba(34, 197, 94, 0.10)" : "var(--bg-surface)",
+              color: isRunning ? "var(--sem-approve)" : "var(--text-tertiary)",
               border: "0.5px solid var(--border)",
             }}
           >

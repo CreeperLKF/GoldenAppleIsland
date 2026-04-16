@@ -21,6 +21,7 @@ import { useAppSettings } from "../hooks/useAppSettings";
 import type { HookEvent, PolicyKind } from "../types/events";
 import { detectVariant } from "../types/events";
 import { useForceOverrides } from "../hooks/useForceOverrides";
+import Icon from "./ui/Icon";
 
 const APPROVE_ALL_STAGGER_MS = 50;
 
@@ -385,8 +386,8 @@ export default function PopupWindow() {
               style={{
                 height: 22,
                 fontSize: 11,
-                background: "var(--badge-permission-bg)",
-                color: "var(--badge-permission-text)",
+                background: "rgba(245, 158, 11, 0.10)",
+                color: "var(--cat-permission)",
                 borderTop: "0.5px solid var(--border)",
               }}
             >
@@ -397,7 +398,7 @@ export default function PopupWindow() {
                 aria-label="Dismiss hint"
                 style={{ fontSize: 11, marginLeft: 6 }}
               >
-                ×
+                <Icon name="x" size={10} />
               </button>
             </div>
           )}
