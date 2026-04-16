@@ -19,7 +19,7 @@ pub struct CachedHookStatus {
 }
 
 fn default_port() -> u16 {
-    19876
+    10423
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -102,7 +102,7 @@ impl Default for AppSettings {
             sound_enabled: true,
             always_on_top: true,
             collapsed: false,
-            port: 19876,
+            port: 10423,
             log_to_file: false,
             wsl_status_cache: HashMap::new(),
             windows_hook_cache: None,

@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import log from "../lib/log";
-import BrandMark from "./ui/BrandMark";
+import logoUrl from "../assets/logo.png";
 import Icon from "./ui/Icon";
 
 interface HeaderProps {
@@ -53,9 +53,14 @@ export default function Header({
     >
       {/* Left: brand */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-        <span style={{ color: connected ? "var(--gold)" : "var(--text-muted)", display: "inline-flex" }}>
-          <BrandMark size={15} live={connected} />
-        </span>
+        <img
+          src={logoUrl}
+          alt=""
+          width={16}
+          height={16}
+          draggable={false}
+          style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0 }}
+        />
         <span
           style={{
             fontFamily: "var(--font-ui)",
