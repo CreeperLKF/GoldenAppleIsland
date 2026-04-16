@@ -9,11 +9,11 @@ export type SplitAction =
   | "external";
 
 const LABELS: Record<SplitAction, string> = {
-  default: "use session default",
-  auto: "set auto approve",
-  manual: "set manual approve",
-  agent: "set agent approve",
-  external: "set external approve",
+  default: "Use Session Default",
+  auto: "Set Auto Approve",
+  manual: "Set Manual Approve",
+  agent: "Set Agent Approve",
+  external: "Set External Approve",
 };
 
 interface Props {
@@ -74,7 +74,7 @@ export default function PolicySplitButton({
   return (
     <div
       ref={rootRef}
-      style={{ position: "relative", display: "inline-flex", height: 24 }}
+      style={{ position: "relative", display: "flex", height: 24 }}
     >
       <button
         type="button"
@@ -84,7 +84,8 @@ export default function PolicySplitButton({
         className="rounded-l bg-[var(--bg-surface)] text-[var(--text-primary)] hover:brightness-95 disabled:opacity-40"
         style={{
           height: 24,
-          minWidth: 160,
+          flex: 1,
+          minWidth: 0,
           padding: "0 12px",
           fontSize: 12,
           whiteSpace: "nowrap",

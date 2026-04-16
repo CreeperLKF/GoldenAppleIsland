@@ -59,6 +59,7 @@ export default function PolicyDropdown({
       onChange={handleChange}
       className="rounded bg-[var(--bg-surface)] text-[var(--text-primary)] hover:brightness-95 disabled:opacity-40"
       style={{
+        width: "100%",
         height,
         fontSize,
         padding: "0 6px",
