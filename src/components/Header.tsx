@@ -2,7 +2,8 @@ import { useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import log from "../lib/log";
-import logoUrl from "../assets/logo.png";
+import BrandMark from "./ui/BrandMark";
+import Icon from "./ui/Icon";
 
 interface HeaderProps {
   pendingCount: number;
@@ -13,28 +14,21 @@ interface HeaderProps {
   onToggleCollapse: () => void;
 }
 
-export default function Header({
-  pendingCount,
-  connected,
-  pinned,
-  onTogglePin,
-  collapsed,
-  onToggleCollapse,
-}: HeaderProps) {
-  const status =
-    pendingCount > 0
-      ? `${pendingCount} pending`
-      : connected
-        ? "All clear"
-        : "No sessions";
+function statusLabel(pendingCount: number, connected: boolean) {
+  if (pendingCount > 0) return { text: `${pendingCount} pending`, tone: "warn" as const };
+  if (connected) return { text: "idle", tone: "muted" as const };
+  return { text: "offline", tone: "muted" as const };
+}
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest("button")) return;
-      getCurrentWindow().startDragging().catch(log.error);
-    },
-    [],
-  );
+export default function Header({
+  pendingCount, connected, pinned, onTogglePin, collapsed, onToggleCollapse,
+}: HeaderProps) {
+  const status = statusLabel(pendingCount, connected);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    getCurrentWindow().startDragging().catch(log.error);
+  }, []);
 
   const openSettings = useCallback(() => {
     invoke("open_settings_window").catch(log.error);
@@ -43,141 +37,109 @@ export default function Header({
   return (
     <header
       id="popup-header"
-      className="flex h-9 items-center justify-between px-3 bg-[var(--bg-surface)] select-none"
-      style={{
-        borderBottom: "0.5px solid var(--border)",
-      }}
       onMouseDown={handleMouseDown}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        height: 36,
+        padding: "0 10px",
+        background: "var(--bg-surface)",
+        userSelect: "none",
+        cursor: "grab",
+        /* hairline divider without subpixel issues */
+        boxShadow: "0 0.5px 0 0 var(--border)",
+      }}
     >
-      <div className="flex items-center gap-2">
-        <img
-          src={logoUrl}
-          alt=""
-          width={16}
-          height={16}
-          draggable={false}
-          style={{ width: 16, height: 16, borderRadius: 3, flexShrink: 0 }}
-        />
+      {/* Left: brand */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <span style={{ color: connected ? "var(--gold)" : "var(--text-muted)", display: "inline-flex" }}>
+          <BrandMark size={15} live={connected} />
+        </span>
         <span
-          className="inline-block rounded-full"
-          style={{ width: 8, height: 8, background: "var(--accent-green)" }}
-          aria-hidden
-        />
-        <span
-          className="font-semibold text-[var(--text-primary)]"
-          style={{ fontSize: 13 }}
+          style={{
+            fontFamily: "var(--font-ui)",
+            fontSize: "var(--fs-title)",
+            fontWeight: 600,
+            letterSpacing: "-0.01em",
+            color: "var(--text-primary)",
+          }}
         >
           Golden Apple Island
         </span>
       </div>
-      <div className="flex items-center gap-1">
+
+      {/* Right: status + actions */}
+      <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
         <span
-          className="text-[var(--text-tertiary)] mr-1"
-          style={{ fontSize: 11 }}
-        >
-          {status}
-        </span>
-        {/* Pin toggle */}
-        <button
-          type="button"
-          onClick={onTogglePin}
-          className="flex items-center justify-center rounded hover:bg-[var(--bg-elevated)]"
-          style={{ width: 24, height: 24, fontSize: 13 }}
-          aria-label={pinned ? "Unpin from top" : "Pin to top"}
-          title={pinned ? "Unpin from top" : "Pin to top"}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill={pinned ? "currentColor" : "none"}
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ color: pinned ? "var(--text-primary)" : "var(--text-tertiary)" }}
-          >
-            <path d="M12 17v5" />
-            <path d="M9 2h6l-1 7h4l-2 4H8l-2-4h4L9 2z" />
-          </svg>
-        </button>
-        {/* Settings */}
-        <button
-          type="button"
-          onClick={openSettings}
-          className="flex items-center justify-center rounded hover:bg-[var(--bg-elevated)]"
-          style={{ width: 24, height: 24, fontSize: 13 }}
-          aria-label="Open settings"
-          title="Settings"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ color: "var(--text-tertiary)" }}
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
-        {/* Minimize */}
-        <button
-          type="button"
-          onClick={() => {
-            invoke("hide_popup").catch(log.error);
+          className="tabular"
+          style={{
+            fontSize: "var(--fs-small)",
+            color: status.tone === "warn" ? "var(--cat-shell)" : "var(--text-tertiary)",
+            marginRight: 6,
+            fontFamily: "var(--font-mono)",
+            fontWeight: status.tone === "warn" ? 500 : 400,
           }}
-          className="flex items-center justify-center rounded hover:bg-[var(--bg-elevated)]"
-          style={{ width: 24, height: 24, fontSize: 13 }}
-          aria-label="Minimize"
-          title="Minimize"
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ color: "var(--text-tertiary)" }}
-          >
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-        </button>
-        {/* Collapse toggle */}
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="flex items-center justify-center rounded hover:bg-[var(--bg-elevated)]"
-          style={{ width: 24, height: 24, fontSize: 13 }}
-          aria-label={collapsed ? "Expand" : "Collapse"}
-          title={collapsed ? "Expand" : "Collapse"}
+          {status.text}
+        </span>
+        <IconButton
+          label={pinned ? "Unpin from top" : "Pin to top"}
+          onClick={onTogglePin}
+          active={pinned}
         >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ color: "var(--text-tertiary)" }}
-          >
-            {collapsed ? (
-              <polyline points="6 9 12 15 18 9" />
-            ) : (
-              <polyline points="18 15 12 9 6 15" />
-            )}
-          </svg>
-        </button>
+          <Icon name="pin" size={14} />
+        </IconButton>
+        <IconButton label="Open settings" onClick={openSettings}>
+          <Icon name="settings" size={14} />
+        </IconButton>
+        <IconButton label="Minimize" onClick={() => invoke("hide_popup").catch(log.error)}>
+          <Icon name="minimize" size={14} />
+        </IconButton>
+        <IconButton label={collapsed ? "Expand" : "Collapse"} onClick={onToggleCollapse}>
+          <Icon name={collapsed ? "chevron-down" : "chevron-up"} size={14} />
+        </IconButton>
       </div>
     </header>
+  );
+}
+
+function IconButton({
+  children, onClick, label, active = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  label: string;
+  active?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      style={{
+        width: 28, height: 28,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "transparent",
+        border: "none",
+        borderRadius: 6,
+        color: active ? "var(--gold)" : "var(--text-tertiary)",
+        cursor: "pointer",
+        transition: "background-color 120ms, color 120ms",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "var(--bg-elevated)";
+        if (!active) e.currentTarget.style.color = "var(--text-primary)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "transparent";
+        if (!active) e.currentTarget.style.color = "var(--text-tertiary)";
+      }}
+    >
+      {children}
+    </button>
   );
 }
