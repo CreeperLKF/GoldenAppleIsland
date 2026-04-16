@@ -1,6 +1,6 @@
 # WebSocket Protocol
 
-The Tauri app listens on `127.0.0.1:19876`. All messages are JSON, one per frame. Responses are routed by event `id`, so multiple bridge clients can share the server safely.
+The Tauri app listens on `127.0.0.1:10423`. All messages are JSON, one per frame. Responses are routed by event `id`, so multiple bridge clients can share the server safely.
 
 ## Bridge → app
 

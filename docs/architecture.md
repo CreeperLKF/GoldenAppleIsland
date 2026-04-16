@@ -11,13 +11,13 @@ Claude Code                                Golden Apple Island
    │                                          ▲
    ▼                                          │
 pre-tool-use.sh  ──►  bridge.mjs  ══ ws ═══►  WebSocket server
-   ▲                                          │   (localhost:19876)
+   ▲                                          │   (localhost:10423)
    │                                          ▼
    └──── exit 0/1 ◄── approve/deny ◄──  Approval popup + tray
 ```
 
 1. A bash hook script in WSL catches the `PreToolUse` event Claude Code emits before running any tool.
-2. A zero-dependency Node bridge (`bridge.mjs`) forwards the event over `ws://localhost:19876`.
+2. A zero-dependency Node bridge (`bridge.mjs`) forwards the event over `ws://localhost:10423`.
 3. The Tauri app receives the event, shows a Windows toast, and renders an approval card in the tray popup.
 4. Your click routes back over the same WebSocket. The hook script exits `0` (approve) or `1` (deny), and Claude Code continues.
 
@@ -26,7 +26,7 @@ If no click arrives within 5 minutes, the event auto-denies client-side so the W
 ## Why this shape
 
 - **WebSocket over HTTP/stdio:** we need server-pushed events from Windows to WSL in both directions. WebSocket is the simplest full-duplex transport that works without elevated permissions.
-- **localhost only:** the server binds to `127.0.0.1:19876`. WSL2's `localhost` forwarding puts the loopback from both sides on the same port without extra NAT config.
+- **localhost only:** the server binds to `127.0.0.1:10423`. WSL2's `localhost` forwarding puts the loopback from both sides on the same port without extra NAT config.
 - **Zero-dep bridge:** `bridge.mjs` uses only Node 22+'s built-in `WebSocket`, so installing the hook does not require `npm install` inside WSL.
 - **One server, many sessions:** responses are routed by event `id`, so multiple Claude Code sessions (even from different distributions) can share one Windows app instance.
 

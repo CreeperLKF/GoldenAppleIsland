@@ -75,7 +75,7 @@ fi
 echo ""
 echo "===== Golden Apple Island installed ====="
 echo "Hook script: $HOOKS_DIR/pre-tool-use.sh"
-echo "Next: start the Windows Tauri app (listens on ws://localhost:19876)."
+echo "Next: start the Windows Tauri app (listens on ws://localhost:10423)."
 echo "Verify: echo '{\"tool_name\":\"bash\",\"tool_input\":{\"command\":\"ls\"}}' | $HOOKS_DIR/pre-tool-use.sh; echo \$?"
 
 exit 0
