@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import type { PolicyKind } from "../../types/events";
 
-export type SplitAction = "default" | "auto" | "manual";
+export type SplitAction =
+  | "default"
+  | "auto"
+  | "manual"
+  | "agent"
+  | "external";
 
 const LABELS: Record<SplitAction, string> = {
   default: "use session default",
   auto: "set auto approve",
   manual: "set manual approve",
+  agent: "set agent approve",
+  external: "set external approve",
 };
 
 interface Props {
   onCommit: (kind: PolicyKind | null) => void;
   disabled?: boolean;
   initialAction?: SplitAction;
+  agentConfigured?: boolean;
+  externalConfigured?: boolean;
 }
 
 function actionToKind(action: SplitAction): PolicyKind | null {
@@ -24,11 +33,19 @@ export default function PolicySplitButton({
   onCommit,
   disabled = false,
   initialAction = "auto",
+  agentConfigured = true,
+  externalConfigured = true,
 }: Props) {
   const [staged, setStaged] = useState<SplitAction>(initialAction);
   const [menuOpen, setMenuOpen] = useState(false);
   const [pulsing, setPulsing] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const isActionDisabled = (a: SplitAction): boolean => {
+    if (a === "agent") return !agentConfigured;
+    if (a === "external") return !externalConfigured;
+    return false;
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -42,12 +59,14 @@ export default function PolicySplitButton({
 
   const commit = () => {
     if (disabled) return;
+    if (isActionDisabled(staged)) return;
     onCommit(actionToKind(staged));
     setPulsing(true);
     window.setTimeout(() => setPulsing(false), 200);
   };
 
   const pick = (next: SplitAction) => {
+    if (isActionDisabled(next)) return;
     setStaged(next);
     setMenuOpen(false);
   };
@@ -65,7 +84,7 @@ export default function PolicySplitButton({
         className="rounded-l bg-[var(--bg-surface)] text-[var(--text-primary)] hover:brightness-95 disabled:opacity-40"
         style={{
           height: 24,
-          minWidth: 140,
+          minWidth: 160,
           padding: "0 12px",
           fontSize: 12,
           whiteSpace: "nowrap",
@@ -113,29 +132,33 @@ export default function PolicySplitButton({
             padding: 2,
           }}
         >
-          {(Object.keys(LABELS) as SplitAction[]).map((a) => (
-            <button
-              key={a}
-              type="button"
-              role="menuitem"
-              onClick={() => pick(a)}
-              className="w-full text-left hover:bg-[var(--bg-base)]"
-              style={{
-                display: "block",
-                padding: "4px 8px",
-                fontSize: 12,
-                color:
-                  a === staged
-                    ? "var(--text-primary)"
-                    : "var(--text-secondary)",
-                background: "transparent",
-                border: "none",
-                borderRadius: 3,
-              }}
-            >
-              {LABELS[a]}
-            </button>
-          ))}
+          {(Object.keys(LABELS) as SplitAction[]).map((a) => {
+            const itemDisabled = isActionDisabled(a);
+            return (
+              <button
+                key={a}
+                type="button"
+                role="menuitem"
+                onClick={() => pick(a)}
+                disabled={itemDisabled}
+                className="w-full text-left hover:bg-[var(--bg-base)] disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  display: "block",
+                  padding: "4px 8px",
+                  fontSize: 12,
+                  color:
+                    a === staged
+                      ? "var(--text-primary)"
+                      : "var(--text-secondary)",
+                  background: "transparent",
+                  border: "none",
+                  borderRadius: 3,
+                }}
+              >
+                {LABELS[a]}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

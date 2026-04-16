@@ -159,6 +159,8 @@ export default function PolicyPanel({
           <PolicySplitButton
             onCommit={onCommitSessionPolicy}
             disabled={activeSessionId === null}
+            agentConfigured={agentConfigured}
+            externalConfigured={externalConfigured}
           />
         </div>
       </div>
