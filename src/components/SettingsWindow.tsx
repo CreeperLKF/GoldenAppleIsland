@@ -13,7 +13,6 @@ import SettingsTabs, { type TabDef } from "./SettingsTabs";
 import { useAppSettings } from "../hooks/useAppSettings";
 import { useTheme } from "../hooks/useTheme";
 import AppearanceSection from "./AppearanceSection";
-import BrandMark from "./ui/BrandMark";
 import SectionCard from "./ui/SectionCard";
 import type { AppSettings, SettingsTabId } from "../types/settings";
 import type { WorkingMode } from "../types/modes";
@@ -172,7 +171,6 @@ export default function SettingsWindow() {
             gap: 6,
           }}
         >
-          <BrandMark size={18} />
           Settings
         </span>
         <button
