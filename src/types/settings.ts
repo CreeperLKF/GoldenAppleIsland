@@ -8,6 +8,8 @@ export interface PopupPosition {
   monitor_name: string;
 }
 
+export type ThemePref = "system" | "light" | "dark";
+
 export interface AppSettings {
   toast_enabled: boolean;
   sound_enabled: boolean;
@@ -28,6 +30,7 @@ export interface AppSettings {
   audit_history_enabled: boolean;
   max_dynamic_sessions: number;
   audit_skip_unpinned_delete_confirm: boolean;
+  theme: ThemePref;
 }
 
 export interface CachedHookStatus {

@@ -11,6 +11,8 @@ import WindowsHookSection from "./WindowsHookSection";
 import WslInstancesSection from "./WslInstancesSection";
 import SettingsTabs, { type TabDef } from "./SettingsTabs";
 import { useAppSettings } from "../hooks/useAppSettings";
+import { useTheme } from "../hooks/useTheme";
+import AppearanceSection from "./AppearanceSection";
 import type { AppSettings, SettingsTabId } from "../types/settings";
 import type { WorkingMode } from "../types/modes";
 import AuditHistoryTab from "./AuditHistoryTab";
@@ -41,6 +43,11 @@ function GeneralTab({
 }) {
   return (
     <div className="flex flex-col" style={{ gap: 0 }}>
+      <SubsectionHeading>Appearance</SubsectionHeading>
+      <div style={{ padding: "8px 16px 12px" }}>
+        <AppearanceSection settings={settings} onChange={update} />
+      </div>
+      <SubsectionDivider />
       <SubsectionHeading>Notifications</SubsectionHeading>
       <NotificationsSection settings={settings} onChange={update} />
       <SubsectionDivider />
@@ -104,6 +111,7 @@ function HookManagementTab({
 }
 
 export default function SettingsWindow() {
+  useTheme();
   const { settings, loading, error, update } = useAppSettings();
   const [active, setActive] = useState<SettingsTabId>("general");
 
