@@ -1,6 +1,10 @@
-# Golden Apple Island
-
-One-click Claude Code approvals from the Windows tray.
+<div align="center">
+  <h1><img src="logo.png" alt="" width="36" height="36" style="vertical-align: middle;" /> Golden Apple Island</h1>
+  <b>One-click Claude Code approvals from the Windows tray.</b>
+  <br/><br/>
+  English | <a href="README_zh.md">简体中文</a>
+  <br/><br/>
+</div>
 
 *Loved \*-Island on macOS and wish Windows had something like it? Try Golden Apple Island.*
 
@@ -78,6 +82,11 @@ Left-click the tray icon to show or hide the popup. Drag it anywhere — its pos
 | `Shift+A` | Approve **all** currently pending cards |
 | `D` | Deny the topmost pending card |
 | `Esc` | Hide the popup |
+
+The popup's policy panel has two controls:
+
+- **Override Policy** — a global top-priority switch that overrides all other rules. Available at any time, even when no session is active. Set it to Force Auto to auto-approve all incoming events regardless of session or configured rules, or Force Manual to force everything through manual review. Resets on app restart (in-memory only). Also supports Agent Approve and External Approve when configured.
+- **Session Policy** — writes a persistent rule for the currently active session. Supports Auto Approve, Manual Approve, Agent Approve, and External Approve. Unconfigured policy kinds appear greyed out.
 
 Per-distribution, per-folder, and per-session approval rules live under **Settings → Approval Policy**.
 
