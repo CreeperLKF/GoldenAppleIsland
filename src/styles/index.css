@@ -105,3 +105,19 @@ pre {
     transition-duration: 0ms !important;
   }
 }
+
+/* ---------- Button ---------- */
+.gai-btn { line-height: 1; }
+.gai-btn--primary:hover   { filter: brightness(1.08); }
+.gai-btn--primary:active  { filter: brightness(0.96); transform: translateY(0.5px); }
+.gai-btn--secondary:hover { background: var(--bg-elevated); }
+.gai-btn--secondary.gai-btn--danger:hover { background: rgba(244, 63, 94, 0.08); }
+.gai-btn--ghost:hover     { background: var(--bg-elevated); color: var(--text-primary); }
+.gai-btn--ghost.gai-btn--danger:hover { background: rgba(244, 63, 94, 0.08); color: var(--sem-deny); }
+.gai-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: none !important; }
+
+/* ---------- StatusDot pulse ---------- */
+@keyframes dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50%      { box-shadow: 0 0 0 4px transparent; }
+}
