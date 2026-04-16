@@ -1,3 +1,5 @@
+import Button from "./ui/Button";
+
 interface ActionButtonsProps {
   onApprove: () => void;
   onDeny: () => void;
@@ -8,72 +10,88 @@ interface ActionButtonsProps {
 }
 
 export default function ActionButtons({
-  onApprove,
-  onDeny,
-  approveLabel,
-  denyLabel,
-  variant = "approval",
-  onApproveSession,
+  onApprove, onDeny, approveLabel, denyLabel,
+  variant = "approval", onApproveSession,
 }: ActionButtonsProps) {
+  // Permission 变体:三按钮
   if (variant === "permission" && onApproveSession) {
     return (
-      <div className="flex" style={{ borderTop: "0.5px solid var(--border)" }}>
-        <button
-          type="button"
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          gap: 8,
+          padding: "8px 12px",
+          borderTop: "0.5px solid var(--border)",
+        }}
+      >
+        <Button
+          variant="primary"
           onClick={onApprove}
           aria-label={approveLabel}
-          className="flex-1 h-9 font-semibold bg-[var(--approve-bg)] text-[var(--approve-text)] transition-[filter,transform] hover:brightness-95 active:scale-[0.98]"
-          style={{ fontSize: 12, borderRight: "0.5px solid var(--border)" }}
+          kbd="A"
+          style={{ justifyContent: "center" }}
         >
           Allow
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
           onClick={onApproveSession}
           aria-label="Allow for session"
-          className="flex-1 h-9 font-semibold transition-[filter,transform] hover:brightness-95 active:scale-[0.98]"
+          size="sm"
           style={{
-            fontSize: 12,
-            borderRight: "0.5px solid var(--border)",
-            background: "var(--session-approve-bg)",
-            color: "var(--session-approve-text)",
+            color: "var(--sem-info)",
+            textDecoration: "underline",
+            textUnderlineOffset: 2,
           }}
         >
-          Allow session
-        </button>
-        <button
-          type="button"
+          For session
+        </Button>
+        <Button
+          variant="secondary"
+          tone="danger"
           onClick={onDeny}
           aria-label={denyLabel}
-          className="flex-1 h-9 font-semibold bg-[var(--deny-bg)] text-[var(--deny-text)] transition-[filter,transform] hover:brightness-95 active:scale-[0.98]"
-          style={{ fontSize: 12 }}
+          kbd="D"
+          style={{ justifyContent: "center" }}
         >
           Deny
-        </button>
+        </Button>
       </div>
     );
   }
 
+  // 默认:Approve (primary, gold) + Deny (secondary, danger)
   return (
-    <div className="flex" style={{ borderTop: "0.5px solid var(--border)" }}>
-      <button
-        type="button"
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 8,
+        padding: "8px 12px",
+        borderTop: "0.5px solid var(--border)",
+      }}
+    >
+      <Button
+        variant="primary"
         onClick={onApprove}
         aria-label={approveLabel}
-        className="flex-1 h-9 font-semibold bg-[var(--approve-bg)] text-[var(--approve-text)] transition-[filter,transform] hover:brightness-95 active:scale-[0.98]"
-        style={{ fontSize: 13, borderRight: "0.5px solid var(--border)" }}
+        kbd="A"
+        style={{ justifyContent: "center" }}
       >
         Approve
-      </button>
-      <button
-        type="button"
+      </Button>
+      <Button
+        variant="secondary"
+        tone="danger"
         onClick={onDeny}
         aria-label={denyLabel}
-        className="flex-1 h-9 font-semibold bg-[var(--deny-bg)] text-[var(--deny-text)] transition-[filter,transform] hover:brightness-95 active:scale-[0.98]"
-        style={{ fontSize: 13 }}
+        kbd="D"
+        style={{ justifyContent: "center" }}
       >
         Deny
-      </button>
+      </Button>
     </div>
   );
 }

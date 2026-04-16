@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { HookEvent } from "../types/events";
-import { categorize, badgeClass, detectVariant } from "../types/events";
+import { categorize, detectVariant } from "../types/events";
 import ActionButtons from "./ActionButtons";
+import CategoryTag, { categoryVeinColor } from "./ui/CategoryTag";
+import { formatAgo, middleEllipsis } from "../lib/format";
 
 interface ApprovalCardProps {
   event: HookEvent;
@@ -11,48 +13,33 @@ interface ApprovalCardProps {
   onApproveSession?: () => void;
 }
 
-function formatAgo(iso: string, now: number): string {
-  const t = Date.parse(iso);
-  if (Number.isNaN(t)) return "just now";
-  const secs = Math.max(0, Math.round((now - t) / 1000));
-  if (secs < 2) return "just now";
-  if (secs < 60) return `${secs}s ago`;
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  return `${hrs}h ago`;
-}
-
-function describe(event: HookEvent): { primary: string; description: string } {
+function describe(event: HookEvent): { primary: string; meta: string } {
   const category = categorize(event.tool_name);
   const input = event.tool_input;
-  const cwd = event.session_cwd;
+  const cwd = middleEllipsis(event.session_cwd ?? "", 36);
+  const distro = event.source_distro;
 
   if (category === "Shell command") {
     const command = typeof input.command === "string" ? input.command : String(input.command ?? "");
-    return { primary: command, description: `Execute shell command in ${cwd}` };
+    return { primary: command, meta: `${cwd} · ${distro}` };
   }
   if (category === "File write") {
     const path = typeof input.file_path === "string" ? input.file_path : String(input.file_path ?? input.path ?? "");
-    return { primary: path, description: `Write to ${path}` };
+    return { primary: path, meta: `write · ${distro}` };
   }
   if (category === "File read") {
     const path = typeof input.file_path === "string" ? input.file_path : String(input.file_path ?? "");
-    return { primary: path, description: `Read ${path}` };
+    return { primary: path, meta: `read · ${distro}` };
   }
   if (category === "File search") {
     const pattern = typeof input.pattern === "string" ? input.pattern : String(input.pattern ?? "");
-    return { primary: pattern, description: `Search in ${cwd}` };
+    return { primary: pattern, meta: `${cwd} · ${distro}` };
   }
-  return { primary: event.tool_name, description: `Run ${event.tool_name}` };
+  return { primary: event.tool_name, meta: `${cwd} · ${distro}` };
 }
 
 export default function ApprovalCard({
-  event,
-  resolving,
-  onApprove,
-  onDeny,
-  onApproveSession,
+  event, resolving, onApprove, onDeny, onApproveSession,
 }: ApprovalCardProps) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -62,73 +49,107 @@ export default function ApprovalCard({
 
   const variant = detectVariant(event);
   const category = categorize(event.tool_name, variant);
-  const { primary, description } = describe(event);
+  const { primary, meta } = describe(event);
+  const veinColor = categoryVeinColor(category);
 
   return (
     <article
-      className="card-enter overflow-hidden bg-[var(--bg-surface)] transition-all ease-in"
+      className="card-enter"
       style={{
-        borderRadius: 6,
+        background: "var(--bg-surface)",
         border: "0.5px solid var(--border)",
-        marginLeft: 8,
-        marginRight: 8,
-        marginTop: 6,
-        marginBottom: 6,
+        borderRadius: "var(--radius-md)",
+        borderLeft: `3px solid ${veinColor}`,
+        marginLeft: 10,
+        marginRight: 10,
+        marginTop: 8,
+        marginBottom: 0,
+        overflow: "hidden",
         opacity: resolving ? 0 : 1,
-        maxHeight: resolving ? 0 : 400,
-        transitionDuration: "200ms",
+        maxHeight: resolving ? 0 : 500,
+        transform: resolving ? "translateX(8px)" : "translateX(0)",
+        transition: "opacity 160ms ease-out, max-height 160ms ease-out, transform 160ms ease-out",
       }}
     >
       {event.delegation_banner && (
         <div
-          className="delegation-banner"
           role="note"
           style={{
             padding: "6px 12px",
-            fontSize: 11,
-            background: "var(--badge-permission-bg)",
-            color: "var(--badge-permission-text)",
+            fontSize: "var(--fs-small)",
+            color: "var(--sem-warn)",
+            background: "rgba(245, 158, 11, 0.08)",
             borderBottom: "0.5px solid var(--border)",
+            fontFamily: "var(--font-ui)",
           }}
         >
           {event.delegation_banner}
         </div>
       )}
+
       <div style={{ padding: "10px 12px" }}>
-        <div className="flex items-center justify-between">
+        {/* Top row: category + tool name · time */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 8, marginBottom: 8,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+            <CategoryTag category={category} />
+            <span style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--fs-mono-xs)",
+              color: "var(--text-tertiary)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {event.tool_name}
+            </span>
+          </div>
           <span
-            className={`inline-flex items-center rounded font-semibold ${badgeClass(category)}`}
+            className="tabular"
             style={{
-              height: 20,
-              padding: "2px 8px",
-              fontSize: 11,
-              borderRadius: 4,
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--fs-mono-xs)",
+              color: "var(--text-tertiary)",
+              flexShrink: 0,
             }}
           >
-            {category}
-          </span>
-          <span className="text-[var(--text-tertiary)]" style={{ fontSize: 11 }}>
             {formatAgo(event.timestamp, now)}
           </span>
         </div>
 
+        {/* Primary body */}
         <div
-          className="mono text-[var(--text-primary)] mt-2 break-all"
-          style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4 }}
+          className="mono"
+          style={{
+            fontSize: "var(--fs-mono)",
+            lineHeight: "var(--lh-mono)",
+            color: "var(--text-primary)",
+            wordBreak: "break-all",
+            overflowWrap: "anywhere",
+          }}
         >
           {primary}
         </div>
 
-        <div className="text-[var(--text-secondary)] mt-1" style={{ fontSize: 12 }}>
-          {description}
+        {/* Metadata */}
+        <div
+          className="mono"
+          style={{
+            marginTop: 6,
+            fontSize: "var(--fs-mono-sm)",
+            lineHeight: "var(--lh-mono-sm)",
+            color: "var(--text-tertiary)",
+          }}
+        >
+          {meta}
         </div>
       </div>
 
       <ActionButtons
         onApprove={onApprove}
         onDeny={onDeny}
-        approveLabel={`Approve ${category.toLowerCase()}: ${primary}`}
-        denyLabel={`Deny ${category.toLowerCase()}: ${primary}`}
+        approveLabel={`Approve ${category.toLowerCase()}`}
+        denyLabel={`Deny ${category.toLowerCase()}`}
         variant={variant === "permission" ? "permission" : "approval"}
         onApproveSession={onApproveSession}
       />
