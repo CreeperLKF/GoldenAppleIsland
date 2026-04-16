@@ -26,6 +26,12 @@ Anyone who runs Claude Code on Windows — natively, through WSL, or over SSH (c
 - **Hooks you can customize.** Golden Apple Island manages the hook scripts that bridge Claude Code to the tray app. Configure which hook types are active, how they behave per distro or folder, and let the app keep everything in sync — no manual `settings.json` surgery.
 - **Let another agent — or your own vibe-coded service — decide.** Agent Approve spawns a second Claude Code instance as a safety reviewer that reads each request and returns approve / reject / escalate. The [ALICE](https://github.com/CreeperLKF/ALICE) project provides ready-made reviewer profiles — an "Alice" agent that audits what "Bob" (your working agent) is doing. External Approve does the same thing over HTTP, so any service you build or vibe-code can plug in as the decision-maker.
 
+## Roadmap
+
+- [ ] SSH support — connect to Claude Code on remote hosts
+- [ ] WSL NAT and other network modes (beyond mirrored)
+- [ ] UI polish — improved card layout, theme customization, accessibility
+
 ## Quick start
 
 1. **Install the app.** Grab the latest `-setup.exe` from [GitHub Releases](https://github.com/CreeperLKF/GoldenAppleIsland/releases), run it (no admin needed — it installs per-user), and launch **Golden Apple Island** from the Start menu — it appears in your system tray.
@@ -103,3 +109,11 @@ Deeper technical docs live in [`docs/`](docs/):
 | Release process and build scripts | [`docs/releasing.md`](docs/releasing.md) |
 
 Product requirements, design specs, and implementation plans live in the companion development workspace repo.
+
+## Acknowledgements
+
+Inspired by [ping-island](https://github.com/erha19/ping-island/) — the project that motivated the author to build Golden Apple Island.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

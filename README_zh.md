@@ -26,6 +26,12 @@
 - **可自定义的 Hook 管理。** Golden Apple Island 管理连接 Claude Code 与托盘应用的 Hook 脚本。你可以配置哪些 Hook 类型生效、按发行版或文件夹设置不同行为，应用会自动保持一切同步 — 无需手动编辑 `settings.json`。
 - **让另一个 Agent 或你自己 vibe 出来的服务来做决定。** Agent Approve 会启动第二个 Claude Code 实例作为安全审查员，逐条审阅请求并返回批准 / 拒绝 / 上报。[ALICE](https://github.com/CreeperLKF/ALICE) 项目提供开箱即用的审查配置 — 一个 "Alice" Agent 负责审计 "Bob"（你的工作 Agent）的行为。External Approve 则通过 HTTP 实现同样的功能，任何你自行搭建或 vibe-code 出来的服务都能作为决策者接入。
 
+## 路线图
+
+- [ ] SSH 支持 — 连接远程主机上的 Claude Code
+- [ ] WSL NAT 及其他网络模式（不仅限于 mirrored）
+- [ ] 界面优化 — 改进卡片布局、主题定制、无障碍访问
+
 ## 快速开始
 
 1. **安装应用。** 从 [GitHub Releases](https://github.com/CreeperLKF/GoldenAppleIsland/releases) 下载最新的 `-setup.exe`，运行即可（无需管理员权限 — 按用户安装），从开始菜单启动 **Golden Apple Island** — 它会出现在系统托盘中。
@@ -103,3 +109,11 @@ npm run build              # 仅前端
 | 发布流程和构建脚本 | [`docs/releasing.md`](docs/releasing.md) |
 
 产品需求、设计规范和实施计划位于配套的开发工作区仓库中。
+
+## 致谢
+
+灵感来自 [ping-island](https://github.com/erha19/ping-island/) — 该项目激励作者完成了 Golden Apple Island。
+
+## 许可证
+
+MIT — 详见 [LICENSE](LICENSE)。
