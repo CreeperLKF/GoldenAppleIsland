@@ -1,10 +1,11 @@
-<div align="center">
-  <h1><img src="logo.png" alt="" width="36" height="36" style="vertical-align: middle;" /> Golden Apple Island</h1>
-  <b>在 Windows 托盘中一键审批 Claude Code 操作。</b>
-  <br/><br/>
+<h1 align="center">
+  <img src="logo.png" width="36" height="36" alt="Golden Apple Island" valign="middle">&nbsp;
+  Golden Apple Island
+</h1>
+<p align="center">
+  <b>在 Windows 托盘中一键审批 Claude Code 操作。</b><br>
   <a href="README.md">English</a> | 简体中文
-  <br/><br/>
-</div>
+</p>
 
 *喜欢 macOS 上的 \*-Island，希望 Windows 也有类似的工具？试试 Golden Apple Island。*
 
@@ -48,11 +49,9 @@ npm run tauri build
 
 前置条件：Node 20+、通过 `rustup` 安装的 Rust，以及 [Tauri v2 Windows 前置条件](https://v2.tauri.app/start/prerequisites/)（MSVC 构建工具 + WebView2）。
 
-### 可选：Agent Approve（实验性）
+### 可选：Agent Approve 和 External Approve（实验性）
 
-**Agent Approve** 策略将审批决策委托给本地运行的 Claude Code Agent，由工作区的 `CLAUDE.md` 指导。使用前需要将 Claude Code CLI 添加到 Windows `PATH` — 从 <https://claude.com/claude-code> 安装。Golden Apple Island 不捆绑或安装 Claude Code；`claude.exe` 和通过 npm 安装的 `claude.cmd` 均受支持（通过 `which` 解析）。
-
-启用 Agent Approve 后，Golden Apple Island 会对一个小型工作区（默认：`%APPDATA%\golden-apple-island\agent-workspaces\default\`，首次使用时自动下载 ALICE "all-is-well" 配置文件）运行 `claude -p`，等待 JSON 裁决后再响应 Hook 事件。在 **Settings → Approval Policies → Agent Approve (experimental)** 中配置。
+**Agent Approve** 和 **External Approve** 策略分别将审批决策委托给 AI Agent 或外部 HTTP 端点。详见专门指南：[`docs/agent-external-approve.md`](docs/agent-external-approve.md)。
 
 ## 开发
 
@@ -97,6 +96,7 @@ npm run build              # 仅前端
 | 查找内容 | 文档 |
 |---|---|
 | Hook、桥接和 Windows 应用如何协同 | [`docs/architecture.md`](docs/architecture.md) |
+| Agent Approve 和 External Approve 配置指南 | [`docs/agent-external-approve.md`](docs/agent-external-approve.md) |
 | WebSocket 消息协议 | [`docs/websocket-protocol.md`](docs/websocket-protocol.md) |
 | 发布流程和构建脚本 | [`docs/releasing.md`](docs/releasing.md) |
 

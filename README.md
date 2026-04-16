@@ -1,10 +1,11 @@
-<div align="center">
-  <h1><img src="logo.png" alt="" width="36" height="36" style="vertical-align: middle;" /> Golden Apple Island</h1>
-  <b>One-click Claude Code approvals from the Windows tray.</b>
-  <br/><br/>
+<h1 align="center">
+  <img src="logo.png" width="36" height="36" alt="Golden Apple Island" valign="middle">&nbsp;
+  Golden Apple Island
+</h1>
+<p align="center">
+  <b>One-click Claude Code approvals from the Windows tray.</b><br>
   English | <a href="README_zh.md">简体中文</a>
-  <br/><br/>
-</div>
+</p>
 
 *Loved \*-Island on macOS and wish Windows had something like it? Try Golden Apple Island.*
 
@@ -48,11 +49,9 @@ The setup.exe lands in `src-tauri/target/release/bundle/nsis/`. Run it, launch t
 
 Prerequisites: Node 20+, Rust via `rustup`, and the [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/) for Windows (MSVC build tools + WebView2).
 
-### Optional: Agent Approve (experimental)
+### Optional: Agent Approve & External Approve (experimental)
 
-The **Agent Approve** policy kind delegates approval decisions to a locally-running Claude Code agent guided by a workspace `CLAUDE.md`. Using it requires the Claude Code CLI on your Windows `PATH` — install it from <https://claude.com/claude-code>. Golden Apple Island does not bundle or install Claude Code; both `claude.exe` and the npm-installed `claude.cmd` shim are supported (resolved via `which`).
-
-When Agent Approve is enabled for a rule, Golden Apple Island spawns `claude -p` against a small workspace (default: `%APPDATA%\golden-apple-island\agent-workspaces\default\`, pre-populated with the ALICE "all-is-well" profile downloaded on first use) and waits for a JSON verdict before responding to the hook event. Configure it under **Settings → Approval Policies → Agent Approve (experimental)**.
+The **Agent Approve** and **External Approve** policy kinds delegate approval decisions to an AI agent or an external HTTP endpoint, respectively. See the dedicated guide: [`docs/agent-external-approve.md`](docs/agent-external-approve.md).
 
 ## Develop
 
@@ -97,6 +96,7 @@ Deeper technical docs live in [`docs/`](docs/):
 | Looking for… | Read |
 |---|---|
 | How the hook, bridge, and Windows app fit together | [`docs/architecture.md`](docs/architecture.md) |
+| Agent Approve & External Approve setup guide | [`docs/agent-external-approve.md`](docs/agent-external-approve.md) |
 | The WebSocket message schema | [`docs/websocket-protocol.md`](docs/websocket-protocol.md) |
 | Release process and build scripts | [`docs/releasing.md`](docs/releasing.md) |
 
