@@ -38,6 +38,8 @@
 2. **启用 WSL 发行版。** 右键托盘图标 → **Settings → Hook Management → WSL Instances → Enable all**。应用会为每个发行版安装 Hook 并自动注册到 `~/.claude/settings.json`。
 3. **试一试。** 在任意 WSL 终端中运行 `claude`，让它执行一个需要工具调用的操作。Windows 通知弹出，托盘显示审批卡片 — 点击 ✓ 或 ✗，会话随即继续。
 
+如需了解所有功能的完整介绍，请参阅[用户手册](docs/user-manual-zh.md)。
+
 > **网络说明。** WSL 支持目前需要在 `.wslconfig` 中设置 `networkingMode = mirrored`，以便桥接程序可以通过 `127.0.0.1` 连接到 Windows WebSocket 服务器。NAT 及其他 WSL 网络模式在规划中。
 
 ## 安装
@@ -103,6 +105,7 @@ npm run build              # 仅前端
 
 | 查找内容 | 文档 |
 |---|---|
+| 完整功能介绍 | [`docs/user-manual-zh.md`](docs/user-manual-zh.md) |
 | Hook、桥接和 Windows 应用如何协同 | [`docs/architecture.md`](docs/architecture.md) |
 | Agent Approve 和 External Approve 配置指南 | [`docs/agent-external-approve.md`](docs/agent-external-approve.md) |
 | WebSocket 消息协议 | [`docs/websocket-protocol.md`](docs/websocket-protocol.md) |

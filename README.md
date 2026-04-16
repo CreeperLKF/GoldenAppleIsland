@@ -38,6 +38,8 @@ Anyone who runs Claude Code on Windows — natively, through WSL, or over SSH (c
 2. **Enable your WSL distros.** Right-click the tray icon → **Settings → Hook Management → WSL Instances → Enable all**. The app installs the hook into every distribution and registers it in `~/.claude/settings.json` for you.
 3. **Try it.** Run `claude` in any WSL shell and have it do something that needs a tool call. A Windows toast pops up and the tray shows an approval card — click ✓ or ✗ and the session unblocks.
 
+For a complete walkthrough of all features, see the [User Manual](docs/user-manual.md).
+
 > **Networking note.** WSL support currently requires `networkingMode = mirrored` in your `.wslconfig` so the bridge can reach the Windows WebSocket server on `127.0.0.1`. NAT and other WSL network modes are on the roadmap.
 
 ## Install
@@ -103,6 +105,7 @@ Deeper technical docs live in [`docs/`](docs/):
 
 | Looking for… | Read |
 |---|---|
+| Complete feature walkthrough | [`docs/user-manual.md`](docs/user-manual.md) |
 | How the hook, bridge, and Windows app fit together | [`docs/architecture.md`](docs/architecture.md) |
 | Agent Approve & External Approve setup guide | [`docs/agent-external-approve.md`](docs/agent-external-approve.md) |
 | The WebSocket message schema | [`docs/websocket-protocol.md`](docs/websocket-protocol.md) |
